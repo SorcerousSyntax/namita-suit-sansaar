@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { v2 as cloudinary } from 'cloudinary';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // Increase timeout to 60s for uploads
+
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
@@ -12,6 +15,7 @@ export async function POST(request) {
     try {
         const auth = await requireAdmin();
         if (auth.error) {
+            console.error('Upload Auth Error:', auth.error);
             return NextResponse.json({ error: auth.error }, { status: auth.status });
         }
 
@@ -27,6 +31,11 @@ export async function POST(request) {
         for (const file of files) {
             if (!file.type.startsWith('image/')) {
                 return NextResponse.json({ error: 'Only image files are allowed' }, { status: 400 });
+            }
+
+            // check file size > 4.5MB (Vercel Limit)
+            if (file.size > 4.5 * 1024 * 1024) {
+                return NextResponse.json({ error: `File too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Max 4.5MB on Vercel.` }, { status: 400 });
             }
 
             // Convert file to base64 for Cloudinary upload
@@ -50,6 +59,6 @@ export async function POST(request) {
         return NextResponse.json({ urls });
     } catch (error) {
         console.error('Upload error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: error.message || 'Upload failed internally' }, { status: 500 });
     }
 }

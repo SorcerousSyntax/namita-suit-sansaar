@@ -62,7 +62,15 @@ export default function AdminProductsPage() {
         }
         try {
             const res = await fetch('/api/upload', { method: 'POST', body: formData });
-            const data = await res.json();
+            let data;
+            try {
+                data = await res.json();
+            } catch (jsonError) {
+                console.error('JSON Parse Error:', jsonError);
+                // If response is not JSON, it's likely a Vercel HTML error page (500, 504, 413)
+                throw new Error(`Server Error (${res.status}): ${res.statusText}`);
+            }
+
             if (res.ok && data.urls) {
                 setForm(prev => ({ ...prev, images: [...prev.images, ...data.urls] }));
                 addToast('Images uploaded!', 'success');
@@ -70,6 +78,7 @@ export default function AdminProductsPage() {
                 addToast(data.error || 'Upload failed', 'error');
             }
         } catch (error) {
+            console.error('Upload Request Error:', error);
             addToast('Upload failed: ' + error.message, 'error');
         } finally {
             setUploading(false);
