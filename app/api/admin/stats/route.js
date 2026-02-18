@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Product from '@/lib/models/Product';
@@ -17,6 +19,7 @@ export async function GET() {
         const totalProducts = await Product.countDocuments();
         const totalOrders = await Order.countDocuments();
         const totalUsers = await User.countDocuments({ role: 'user' });
+
         const totalRevenue = await Order.aggregate([
             { $group: { _id: null, total: { $sum: '$totalAmount' } } },
         ]);
