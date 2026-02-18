@@ -87,6 +87,11 @@ export default function AdminProductsPage() {
 
     async function handleSave(e) {
         e.preventDefault();
+
+        if (form.images.length === 0) {
+            if (!confirm('This product has no images. Are you sure you want to save it?')) return;
+        }
+
         const body = {
             title: form.title,
             description: form.description,
@@ -255,11 +260,21 @@ export default function AdminProductsPage() {
                                 </div>
                             </div>
                             <div className="modal-actions">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                                <button type="submit" className="btn btn-primary">
-                                    {editingProduct ? 'Update Product' : 'Add Product'}
+                                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)} disabled={uploading}>Cancel</button>
+                                <button type="submit" className="btn btn-primary" disabled={uploading}>
+                                    {uploading ? 'Uploading Images...' : (editingProduct ? 'Update Product' : 'Add Product')}
                                 </button>
                             </div>
+
+                            {/* Debug info to help user verify images are attached */}
+                            {form.images.length === 0 && (
+                                <p style={{ fontSize: '0.8rem', color: '#eab308', marginTop: '8px' }}>
+                                    ⚠️ No images attached yet. Please upload an image and wait for it to appear above.
+                                </p>
+                            )}
+                            {/* <div style={{ fontSize: '0.7rem', color: '#666', marginTop: '10px' }}>
+                                Debug: {JSON.stringify(form.images)}
+                            </div> */}
                         </form>
                     </div>
                 </div>
