@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
 import { requireAdmin } from '@/lib/auth';
 
 export async function POST(request) {
@@ -17,18 +15,26 @@ export async function POST(request) {
             return NextResponse.json({ error: 'No files uploaded' }, { status: 400 });
         }
 
-        const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-        await mkdir(uploadDir, { recursive: true });
-
         const urls = [];
 
         for (const file of files) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                return NextResponse.json({ error: 'Only image files are allowed' }, { status: 400 });
+            }
+
+            // Limit file size (5MB)
+            const MAX_SIZE = 5 * 1024 * 1024;
+            if (file.size > MAX_SIZE) {
+                return NextResponse.json({ error: 'Image must be under 5MB' }, { status: 400 });
+            }
+
+            // Convert to base64 data URL (works on Vercel)
             const bytes = await file.arrayBuffer();
             const buffer = Buffer.from(bytes);
-            const filename = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
-            const filepath = path.join(uploadDir, filename);
-            await writeFile(filepath, buffer);
-            urls.push(`/uploads/${filename}`);
+            const base64 = buffer.toString('base64');
+            const dataUrl = `data:${file.type};base64,${base64}`;
+            urls.push(dataUrl);
         }
 
         return NextResponse.json({ urls });

@@ -73,7 +73,7 @@ export default function ProductDetailPage() {
                 <div className="product-detail-grid">
                     <div className="product-gallery">
                         <div className="product-main-image">
-                            {product.images && product.images.length > 0 && !product.images[0].startsWith('/uploads/sample') ? (
+                            {product.images && product.images.length > 0 && (product.images[0].startsWith('data:') || product.images[0].startsWith('http')) ? (
                                 <img src={product.images[selectedImage] || product.images[0]} alt={product.title} />
                             ) : (
                                 <div style={{

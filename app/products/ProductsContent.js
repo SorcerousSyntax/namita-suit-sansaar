@@ -110,7 +110,7 @@ export default function ProductsContent() {
                                 {products.map(product => (
                                     <Link href={`/products/${product._id}`} key={product._id} className="product-card">
                                         <div className="product-card-image">
-                                            {product.images && product.images[0] && !product.images[0].startsWith('/uploads/sample') ? (
+                                            {product.images && product.images[0] && (product.images[0].startsWith('data:') || product.images[0].startsWith('http')) ? (
                                                 <img src={product.images[0]} alt={product.title} />
                                             ) : (
                                                 <div style={{

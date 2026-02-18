@@ -42,10 +42,20 @@ export default function AdminOrdersPage() {
     const statusBadge = (status) => {
         const map = {
             'Pending': 'badge-warning',
+            'Paid': 'badge-success',
             'Shipped': 'badge-gold',
             'Delivered': 'badge-success',
         };
         return map[status] || 'badge-gold';
+    };
+
+    const paymentBadge = (status) => {
+        const map = {
+            'paid': 'badge-success',
+            'pending': 'badge-warning',
+            'failed': 'badge-error',
+        };
+        return map[status] || 'badge-warning';
     };
 
     return (
@@ -70,6 +80,7 @@ export default function AdminOrdersPage() {
                                 <th>Total</th>
                                 <th>Date</th>
                                 <th>Status</th>
+                                <th>Payment</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -115,6 +126,11 @@ export default function AdminOrdersPage() {
                                         </span>
                                     </td>
                                     <td>
+                                        <span className={`badge ${paymentBadge(order.paymentStatus || 'pending')}`}>
+                                            {(order.paymentStatus || 'pending').toUpperCase()}
+                                        </span>
+                                    </td>
+                                    <td>
                                         <select
                                             className="input"
                                             value={order.status}
@@ -122,6 +138,7 @@ export default function AdminOrdersPage() {
                                             style={{ padding: '8px', fontSize: '0.85rem', minWidth: '120px' }}
                                         >
                                             <option value="Pending">Pending</option>
+                                            <option value="Paid">Paid</option>
                                             <option value="Shipped">Shipped</option>
                                             <option value="Delivered">Delivered</option>
                                         </select>

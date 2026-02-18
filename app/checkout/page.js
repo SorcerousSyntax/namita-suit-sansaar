@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCart } from '@/components/CartContext';
 import { useAuth } from '@/components/AuthContext';
 import { useToast } from '@/components/ToastContext';
@@ -18,6 +18,18 @@ export default function CheckoutPage() {
     const [pincode, setPincode] = useState('');
     const [loading, setLoading] = useState(false);
     const [orderPlaced, setOrderPlaced] = useState(false);
+    const [paymentId, setPaymentId] = useState('');
+
+    // Load Razorpay script
+    useEffect(() => {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.async = true;
+        document.body.appendChild(script);
+        return () => {
+            document.body.removeChild(script);
+        };
+    }, []);
 
     if (!user) {
         return (
@@ -57,8 +69,21 @@ export default function CheckoutPage() {
         return (
             <div className="confirmation-page fade-in">
                 <div className="confirmation-icon">✅</div>
-                <h1>Order Placed Successfully!</h1>
-                <p>Thank you for your purchase. Your order has been confirmed and will be processed shortly.</p>
+                <h1>Payment Successful!</h1>
+                <p>Thank you for your purchase. Your payment has been verified and order has been placed.</p>
+                {paymentId && (
+                    <div style={{
+                        background: 'var(--bg-secondary)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '16px 24px',
+                        margin: '20px auto',
+                        maxWidth: '400px',
+                    }}>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Payment ID</div>
+                        <div style={{ fontFamily: 'monospace', color: 'var(--gold)', fontWeight: 600 }}>{paymentId}</div>
+                    </div>
+                )}
                 <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
                     <Link href="/orders" className="btn btn-primary">
                         View My Orders
@@ -73,14 +98,30 @@ export default function CheckoutPage() {
 
     async function handlePlaceOrder(e) {
         e.preventDefault();
+
         if (!fullName || !phone || !address || !pincode) {
             addToast('Please fill in all fields', 'error');
             return;
         }
+
+        // Validate phone
+        const cleanPhone = phone.replace(/[\s-]/g, '');
+        if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+            addToast('Please enter a valid 10-digit phone number', 'error');
+            return;
+        }
+
+        // Validate pincode
+        if (!/^\d{6}$/.test(pincode)) {
+            addToast('Please enter a valid 6-digit pincode', 'error');
+            return;
+        }
+
         setLoading(true);
 
         try {
-            const res = await fetch('/api/orders', {
+            // Step 1: Create Razorpay order via our API
+            const createRes = await fetch('/api/payment/create-order', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -89,23 +130,86 @@ export default function CheckoutPage() {
                         quantity: item.quantity,
                     })),
                     fullName,
-                    phone,
+                    phone: cleanPhone,
                     address,
                     pincode,
                 }),
             });
 
-            const data = await res.json();
-            if (res.ok) {
-                clearCart();
-                setOrderPlaced(true);
-                addToast('Order placed successfully!', 'success');
-            } else {
-                addToast(data.error || 'Failed to place order', 'error');
+            const orderData = await createRes.json();
+
+            if (!createRes.ok) {
+                addToast(orderData.error || 'Failed to create order', 'error');
+                setLoading(false);
+                return;
             }
+
+            // Step 2: Open Razorpay checkout modal
+            const options = {
+                key: orderData.key,
+                amount: orderData.amount,
+                currency: orderData.currency,
+                name: 'Namita Suit Sansaar',
+                description: 'Premium Ethnic Wear',
+                order_id: orderData.orderId,
+                handler: async function (response) {
+                    // Step 3: Verify payment on server
+                    try {
+                        const verifyRes = await fetch('/api/payment/verify', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                products: orderData.products,
+                                totalAmount: orderData.totalAmount,
+                                fullName,
+                                phone: cleanPhone,
+                                address,
+                                pincode,
+                            }),
+                        });
+
+                        const verifyData = await verifyRes.json();
+
+                        if (verifyRes.ok && verifyData.success) {
+                            clearCart();
+                            setPaymentId(response.razorpay_payment_id);
+                            setOrderPlaced(true);
+                            addToast('Payment successful! Order placed.', 'success');
+                        } else {
+                            addToast(verifyData.error || 'Payment verification failed', 'error');
+                        }
+                    } catch (error) {
+                        addToast('Payment verification failed. Contact support.', 'error');
+                    }
+                    setLoading(false);
+                },
+                prefill: {
+                    name: fullName,
+                    contact: cleanPhone,
+                    email: user.email || '',
+                },
+                theme: {
+                    color: '#d4a853',
+                },
+                modal: {
+                    ondismiss: function () {
+                        setLoading(false);
+                        addToast('Payment cancelled', 'warning');
+                    },
+                },
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (response) {
+                addToast(`Payment failed: ${response.error.description}`, 'error');
+                setLoading(false);
+            });
+            rzp.open();
         } catch (error) {
-            addToast('Something went wrong', 'error');
-        } finally {
+            addToast('Something went wrong. Please try again.', 'error');
             setLoading(false);
         }
     }
@@ -132,7 +236,7 @@ export default function CheckoutPage() {
                         </div>
                         <div className="input-group">
                             <label>Phone Number</label>
-                            <input type="tel" className="input" placeholder="Enter your phone number" value={phone} onChange={e => setPhone(e.target.value)} required />
+                            <input type="tel" className="input" placeholder="10-digit phone number" value={phone} onChange={e => setPhone(e.target.value)} required />
                         </div>
                         <div className="input-group">
                             <label>Full Address</label>
@@ -140,10 +244,28 @@ export default function CheckoutPage() {
                         </div>
                         <div className="input-group">
                             <label>Pincode</label>
-                            <input type="text" className="input" placeholder="Enter pincode" value={pincode} onChange={e => setPincode(e.target.value)} required />
+                            <input type="text" className="input" placeholder="6-digit pincode" value={pincode} onChange={e => setPincode(e.target.value)} required />
                         </div>
+
+                        {/* Security badges */}
+                        <div style={{
+                            display: 'flex', gap: '16px', flexWrap: 'wrap',
+                            padding: '16px', background: 'var(--bg-tertiary)',
+                            borderRadius: 'var(--radius-md)', marginTop: '8px',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                🔒 <span>SSL Encrypted</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                🛡️ <span>Secure Payment</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                ✅ <span>Razorpay Verified</span>
+                            </div>
+                        </div>
+
                         <button type="submit" className="btn btn-primary btn-lg" disabled={loading} style={{ marginTop: '8px' }}>
-                            {loading ? 'Placing Order...' : `Place Order — ₹${(total + shipping).toLocaleString('en-IN')}`}
+                            {loading ? 'Processing...' : `Pay ₹${(total + shipping).toLocaleString('en-IN')} with Razorpay`}
                         </button>
                     </form>
                 </div>
@@ -165,6 +287,20 @@ export default function CheckoutPage() {
                     <div className="cart-summary-total">
                         <span>Total</span>
                         <span style={{ color: 'var(--gold)' }}>₹{(total + shipping).toLocaleString('en-IN')}</span>
+                    </div>
+
+                    <div style={{
+                        marginTop: '20px', padding: '16px',
+                        background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)',
+                        textAlign: 'center',
+                    }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Powered by</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#3395FF', letterSpacing: '0.5px' }}>
+                            Razorpay
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                            UPI • Cards • Net Banking • Wallets
+                        </div>
                     </div>
                 </div>
             </div>

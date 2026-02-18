@@ -151,7 +151,7 @@ export default function AdminProductsPage() {
                                                 background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center',
                                                 justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0,
                                             }}>
-                                                {product.images?.[0] && !product.images[0].startsWith('/uploads/sample')
+                                                {product.images?.[0] && (product.images[0].startsWith('data:') || product.images[0].startsWith('http'))
                                                     ? <img src={product.images[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px' }} />
                                                     : '👗'}
                                             </div>
@@ -225,7 +225,7 @@ export default function AdminProductsPage() {
                                                         background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center',
                                                         justifyContent: 'center', fontSize: '1.5rem', overflow: 'hidden',
                                                     }}>
-                                                        {img.startsWith('/uploads/sample') ? '👗' : <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                                                        {img.startsWith('data:') || img.startsWith('http') ? <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '👗'}
                                                     </div>
                                                     <button
                                                         type="button"
