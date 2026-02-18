@@ -12,61 +12,32 @@ cloudinary.config({
 
 export async function POST(request) {
     try {
-        // ⚠️ DO NOT use requireAdmin here with FormData
-
         const formData = await request.formData();
-        const files = formData.getAll('images');
+        const file = formData.get('file');
 
-        if (!files || files.length === 0) {
-            return NextResponse.json({ error: 'No files uploaded' }, { status: 400 });
+        if (!file) {
+            return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
         }
 
-        const urls = [];
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
 
-        for (const file of files) {
-            if (!file.type.startsWith('image/')) {
-                return NextResponse.json(
-                    { error: 'Only image files allowed' },
-                    { status: 400 }
-                );
-            }
+        // Upload to Cloudinary via stream
+        const result = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                { folder: 'namita-suit-sansaar/products' },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            uploadStream.end(buffer);
+        });
 
-            // Vercel limit
-            if (file.size > 4.5 * 1024 * 1024) {
-                return NextResponse.json(
-                    { error: 'Image must be under 4.5MB' },
-                    { status: 400 }
-                );
-            }
-
-            const bytes = await file.arrayBuffer();
-            const buffer = Buffer.from(bytes);
-
-            const result = await new Promise((resolve, reject) => {
-                cloudinary.uploader.upload_stream(
-                    {
-                        folder: 'namita-suit-sansaar',
-                        quality: 'auto',
-                        fetch_format: 'auto',
-                    },
-                    (error, result) => {
-                        if (error) reject(error);
-                        else resolve(result);
-                    }
-                ).end(buffer);
-            });
-
-            urls.push(result.secure_url);
-        }
-
-        return NextResponse.json({ urls });
+        return NextResponse.json({ url: result.secure_url });
 
     } catch (error) {
-        console.error('Upload error:', error);
-
-        return NextResponse.json(
-            { error: error.message || 'Upload failed' },
-            { status: 500 }
-        );
+        console.error('Upload Error:', error);
+        return NextResponse.json({ error: error.message || 'Upload failed' }, { status: 500 });
     }
 }

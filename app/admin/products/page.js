@@ -52,72 +52,32 @@ export default function AdminProductsPage() {
         setShowModal(true);
     }
 
-    // Client-side image compression
-    function compressImage(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX_SIZE = 800;
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > height) {
-                        if (width > MAX_SIZE) {
-                            height *= MAX_SIZE / width;
-                            width = MAX_SIZE;
-                        }
-                    } else {
-                        if (height > MAX_SIZE) {
-                            width *= MAX_SIZE / height;
-                            height = MAX_SIZE;
-                        }
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    // Compress to JPEG at 70% quality
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                    resolve(dataUrl);
-                };
-                img.onerror = (err) => reject(new Error('Image load failed'));
-                img.src = e.target.result;
-            };
-            reader.onerror = (err) => reject(new Error('File read failed'));
-            reader.readAsDataURL(file);
-        });
-    }
-
     async function handleImageUpload(e) {
         const files = e.target.files;
         if (!files.length) return;
 
         setUploading(true);
+        const formData = new FormData();
+        formData.append('file', files[0]); // Send single file to simplified API
+
         try {
-            const newImages = [];
-            for (const file of files) {
-                if (!file.type.startsWith('image/')) {
-                    addToast('Only image files are allowed', 'error');
-                    continue;
-                }
-                // Compress and get Base64 string
-                const compressed = await compressImage(file);
-                newImages.push(compressed);
+            const res = await fetch('/api/upload', { method: 'POST', body: formData });
+
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || `Upload failed (${res.status})`);
             }
 
-            if (newImages.length > 0) {
-                setForm(prev => ({ ...prev, images: [...prev.images, ...newImages] }));
-                addToast('Images processed!', 'success');
+            const data = await res.json();
+            if (data.url) {
+                setForm(prev => ({ ...prev, images: [...prev.images, data.url] }));
+                addToast('Image uploaded!', 'success');
+            } else {
+                throw new Error('No URL returned from server');
             }
         } catch (error) {
-            console.error(error);
-            addToast('Failed to process image: ' + error.message, 'error');
+            console.error('Upload error:', error);
+            addToast(error.message, 'error');
         } finally {
             setUploading(false);
             e.target.value = ''; // Reset input
@@ -137,7 +97,7 @@ export default function AdminProductsPage() {
             price: parseFloat(form.price),
             stock: parseInt(form.stock),
             category: form.category,
-            images: form.images, // Calls API with Base64 strings (JSON)
+            images: form.images,
         };
 
         try {
