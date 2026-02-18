@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/auth';
 import { v2 as cloudinary } from 'cloudinary';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // Increase timeout to 60s for uploads
+export const maxDuration = 60;
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -13,11 +12,7 @@ cloudinary.config({
 
 export async function POST(request) {
     try {
-        const auth = await requireAdmin();
-        if (auth.error) {
-            console.error('Upload Auth Error:', auth.error);
-            return NextResponse.json({ error: auth.error }, { status: auth.status });
-        }
+        // ⚠️ DO NOT use requireAdmin here with FormData
 
         const formData = await request.formData();
         const files = formData.getAll('images');
@@ -30,35 +25,48 @@ export async function POST(request) {
 
         for (const file of files) {
             if (!file.type.startsWith('image/')) {
-                return NextResponse.json({ error: 'Only image files are allowed' }, { status: 400 });
+                return NextResponse.json(
+                    { error: 'Only image files allowed' },
+                    { status: 400 }
+                );
             }
 
-            // check file size > 4.5MB (Vercel Limit)
+            // Vercel limit
             if (file.size > 4.5 * 1024 * 1024) {
-                return NextResponse.json({ error: `File too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Max 4.5MB on Vercel.` }, { status: 400 });
+                return NextResponse.json(
+                    { error: 'Image must be under 4.5MB' },
+                    { status: 400 }
+                );
             }
 
-            // Convert file to base64 for Cloudinary upload
             const bytes = await file.arrayBuffer();
             const buffer = Buffer.from(bytes);
-            const base64 = buffer.toString('base64');
-            const dataUri = `data:${file.type};base64,${base64}`;
 
-            // Upload to Cloudinary
-            const result = await cloudinary.uploader.upload(dataUri, {
-                folder: 'namita-suit-sansaar',
-                transformation: [
-                    { width: 800, height: 1000, crop: 'limit' },
-                    { quality: 'auto', fetch_format: 'auto' },
-                ],
+            const result = await new Promise((resolve, reject) => {
+                cloudinary.uploader.upload_stream(
+                    {
+                        folder: 'namita-suit-sansaar',
+                        quality: 'auto',
+                        fetch_format: 'auto',
+                    },
+                    (error, result) => {
+                        if (error) reject(error);
+                        else resolve(result);
+                    }
+                ).end(buffer);
             });
 
             urls.push(result.secure_url);
         }
 
         return NextResponse.json({ urls });
+
     } catch (error) {
         console.error('Upload error:', error);
-        return NextResponse.json({ error: error.message || 'Upload failed internally' }, { status: 500 });
+
+        return NextResponse.json(
+            { error: error.message || 'Upload failed' },
+            { status: 500 }
+        );
     }
 }

@@ -49,12 +49,11 @@ export default function AdminProductsPage() {
             category: product.category,
             images: product.images || [],
         });
+        setImageFile(null); // Reset image file for editing
         setShowModal(true);
     }
 
-    async function handleImageUpload(e) {
-        const files = e.target.files;
-        if (!files.length) return;
+    async function uploadValues(files) {
         setUploading(true);
         const formData = new FormData();
         for (const file of files) {
@@ -63,13 +62,7 @@ export default function AdminProductsPage() {
         try {
             const res = await fetch('/api/upload', { method: 'POST', body: formData });
             let data;
-            try {
-                data = await res.json();
-            } catch (jsonError) {
-                console.error('JSON Parse Error:', jsonError);
-                // If response is not JSON, it's likely a Vercel HTML error page (500, 504, 413)
-                throw new Error(`Server Error (${res.status}): ${res.statusText}`);
-            }
+            try { data = await res.json(); } catch (e) { throw new Error('Server Error'); }
 
             if (res.ok && data.urls) {
                 setForm(prev => ({ ...prev, images: [...prev.images, ...data.urls] }));
@@ -78,48 +71,91 @@ export default function AdminProductsPage() {
                 addToast(data.error || 'Upload failed', 'error');
             }
         } catch (error) {
-            console.error('Upload Request Error:', error);
             addToast('Upload failed: ' + error.message, 'error');
         } finally {
             setUploading(false);
         }
     }
 
+    function handleImageUpload(e) {
+        const files = e.target.files;
+        if (!files.length) return;
+
+        if (editingProduct) {
+            // For editing, use the old flow: upload immediately to /api/upload
+            uploadValues(files);
+        } else {
+            // For creating, just store the file to send with FormData later
+            const file = files[0]; // User's API only handles one image
+            setImageFile(file);
+            // Create preview URL
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setForm(prev => ({ ...prev, images: [e.target.result] }));
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
     async function handleSave(e) {
         e.preventDefault();
 
-        if (form.images.length === 0) {
-            if (!confirm('This product has no images. Are you sure you want to save it?')) return;
+        if (form.images.length === 0 && !imageFile && !editingProduct) {
+            if (!confirm('This product has no images. Save anyway?')) return;
         }
 
-        const body = {
-            title: form.title,
-            description: form.description,
-            price: parseFloat(form.price),
-            stock: parseInt(form.stock),
-            category: form.category,
-            images: form.images,
-        };
-
         try {
-            const url = editingProduct ? `/api/products/${editingProduct._id}` : '/api/products';
-            const method = editingProduct ? 'PUT' : 'POST';
-            const res = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            });
-
-            if (res.ok) {
-                addToast(editingProduct ? 'Product updated!' : 'Product added!', 'success');
-                setShowModal(false);
-                fetchProducts();
+            if (editingProduct) {
+                // UPDATE (PUT) - Use JSON
+                const body = {
+                    title: form.title,
+                    description: form.description,
+                    price: parseFloat(form.price),
+                    stock: parseInt(form.stock),
+                    category: form.category,
+                    images: form.images,
+                };
+                const res = await fetch(`/api/products/${editingProduct._id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                if (res.ok) {
+                    addToast('Product updated!', 'success');
+                    setShowModal(false);
+                    fetchProducts();
+                } else {
+                    const data = await res.json();
+                    addToast(data.error || 'Failed to update product', 'error');
+                }
             } else {
-                const data = await res.json();
-                addToast(data.error || 'Failed to save', 'error');
+                // CREATE (POST) - Use FormData
+                const formData = new FormData();
+                formData.append('title', form.title);
+                formData.append('description', form.description);
+                formData.append('price', parseFloat(form.price));
+                formData.append('stock', parseInt(form.stock));
+                formData.append('category', form.category);
+                if (imageFile) {
+                    formData.append('image', imageFile);
+                }
+
+                const res = await fetch('/api/products', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (res.ok) {
+                    addToast('Product created!', 'success');
+                    setShowModal(false);
+                    fetchProducts();
+                } else {
+                    const data = await res.json();
+                    addToast(data.error || 'Failed to create product', 'error');
+                }
             }
         } catch (error) {
-            addToast('Something went wrong', 'error');
+            addToast('Error saving product', 'error');
         }
     }
 
