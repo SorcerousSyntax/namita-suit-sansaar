@@ -1,5 +1,12 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
+import { v2 as cloudinary } from 'cloudinary';
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export async function POST(request) {
     try {
@@ -18,23 +25,26 @@ export async function POST(request) {
         const urls = [];
 
         for (const file of files) {
-            // Validate file type
             if (!file.type.startsWith('image/')) {
                 return NextResponse.json({ error: 'Only image files are allowed' }, { status: 400 });
             }
 
-            // Limit file size (4MB to stay within Vercel limits)
-            const MAX_SIZE = 4 * 1024 * 1024;
-            if (file.size > MAX_SIZE) {
-                return NextResponse.json({ error: 'Image must be under 4MB' }, { status: 400 });
-            }
-
-            // Convert to base64 data URL (works on Vercel's read-only filesystem)
+            // Convert file to base64 for Cloudinary upload
             const bytes = await file.arrayBuffer();
             const buffer = Buffer.from(bytes);
             const base64 = buffer.toString('base64');
-            const dataUrl = `data:${file.type};base64,${base64}`;
-            urls.push(dataUrl);
+            const dataUri = `data:${file.type};base64,${base64}`;
+
+            // Upload to Cloudinary
+            const result = await cloudinary.uploader.upload(dataUri, {
+                folder: 'namita-suit-sansaar',
+                transformation: [
+                    { width: 800, height: 1000, crop: 'limit' },
+                    { quality: 'auto', fetch_format: 'auto' },
+                ],
+            });
+
+            urls.push(result.secure_url);
         }
 
         return NextResponse.json({ urls });
@@ -43,6 +53,3 @@ export async function POST(request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
-
-// Increase body size limit for this route (App Router)
-export const dynamic = 'force-dynamic';

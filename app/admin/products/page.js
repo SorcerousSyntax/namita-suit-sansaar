@@ -52,56 +52,25 @@ export default function AdminProductsPage() {
         setShowModal(true);
     }
 
-    function compressImage(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX_SIZE = 800;
-                    let width = img.width;
-                    let height = img.height;
-                    if (width > height) {
-                        if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
-                    } else {
-                        if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
-                    }
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                    resolve(dataUrl);
-                };
-                img.onerror = reject;
-                img.src = e.target.result;
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-        });
-    }
-
     async function handleImageUpload(e) {
         const files = e.target.files;
         if (!files.length) return;
         setUploading(true);
+        const formData = new FormData();
+        for (const file of files) {
+            formData.append('images', file);
+        }
         try {
-            const newImages = [];
-            for (const file of files) {
-                if (!file.type.startsWith('image/')) {
-                    addToast('Only image files are allowed', 'error');
-                    continue;
-                }
-                const compressed = await compressImage(file);
-                newImages.push(compressed);
-            }
-            if (newImages.length > 0) {
-                setForm(prev => ({ ...prev, images: [...prev.images, ...newImages] }));
-                addToast('Images added!', 'success');
+            const res = await fetch('/api/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (res.ok && data.urls) {
+                setForm(prev => ({ ...prev, images: [...prev.images, ...data.urls] }));
+                addToast('Images uploaded!', 'success');
+            } else {
+                addToast(data.error || 'Upload failed', 'error');
             }
         } catch (error) {
-            addToast('Failed to process image: ' + error.message, 'error');
+            addToast('Upload failed: ' + error.message, 'error');
         } finally {
             setUploading(false);
         }
