@@ -53,109 +53,106 @@ export default function AdminProductsPage() {
         setShowModal(true);
     }
 
-    async function uploadValues(files) {
-        setUploading(true);
-        const formData = new FormData();
-        for (const file of files) {
-            formData.append('images', file);
-        }
-        try {
-            const res = await fetch('/api/upload', { method: 'POST', body: formData });
-            let data;
-            try { data = await res.json(); } catch (e) { throw new Error('Server Error'); }
+    const [imageFile, setImageFile] = useState(null);
 
-            if (res.ok && data.urls) {
-                setForm(prev => ({ ...prev, images: [...prev.images, ...data.urls] }));
-                addToast('Images uploaded!', 'success');
-            } else {
-                addToast(data.error || 'Upload failed', 'error');
-            }
-        } catch (error) {
-            addToast('Upload failed: ' + error.message, 'error');
-        } finally {
-            setUploading(false);
-        }
-    }
+    // ... (other state)
 
     function handleImageUpload(e) {
         const files = e.target.files;
         if (!files.length) return;
 
-        if (editingProduct) {
-            // For editing, use the old flow: upload immediately to /api/upload
-            uploadValues(files);
-        } else {
-            // For creating, just store the file to send with FormData later
-            const file = files[0]; // User's API only handles one image
-            setImageFile(file);
-            // Create preview URL
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setForm(prev => ({ ...prev, images: [e.target.result] }));
-            };
-            reader.readAsDataURL(file);
-        }
+        // For both Create and Edit, we can optionally just store the file and upload on Save
+        // But for Edit, the user might expect immediate feedback? 
+        // Let's keep it consistent: always store file, upload on Save for reliability.
+
+        const file = files[0];
+        setImageFile(file);
+
+        // Create preview URL
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            setForm(prev => ({ ...prev, images: [e.target.result] }));
+        };
+        reader.readAsDataURL(file);
     }
 
     async function handleSave(e) {
         e.preventDefault();
 
+        // If no images and no file selected, warn user
         if (form.images.length === 0 && !imageFile && !editingProduct) {
             if (!confirm('This product has no images. Save anyway?')) return;
         }
 
         try {
-            if (editingProduct) {
-                // UPDATE (PUT) - Use JSON
-                const body = {
-                    title: form.title,
-                    description: form.description,
-                    price: parseFloat(form.price),
-                    stock: parseInt(form.stock),
-                    category: form.category,
-                    images: form.images,
-                };
-                const res = await fetch(`/api/products/${editingProduct._id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body),
-                });
-                if (res.ok) {
-                    addToast('Product updated!', 'success');
-                    setShowModal(false);
-                    fetchProducts();
-                } else {
-                    const data = await res.json();
-                    addToast(data.error || 'Failed to update product', 'error');
-                }
-            } else {
-                // CREATE (POST) - Use FormData
+            let finalImages = [...form.images];
+
+            // 1. If there is a new file selected, upload it first to /api/upload
+            if (imageFile) {
+                setUploading(true); // Show uploading state
                 const formData = new FormData();
-                formData.append('title', form.title);
-                formData.append('description', form.description);
-                formData.append('price', parseFloat(form.price));
-                formData.append('stock', parseInt(form.stock));
-                formData.append('category', form.category);
-                if (imageFile) {
-                    formData.append('image', imageFile);
-                }
+                formData.append('images', imageFile);
 
-                const res = await fetch('/api/products', {
-                    method: 'POST',
-                    body: formData,
-                });
+                try {
+                    const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
 
-                if (res.ok) {
-                    addToast('Product created!', 'success');
-                    setShowModal(false);
-                    fetchProducts();
-                } else {
-                    const data = await res.json();
-                    addToast(data.error || 'Failed to create product', 'error');
+                    if (!uploadRes.ok) {
+                        const err = await uploadRes.json().catch(() => ({}));
+                        throw new Error(err.error || `Upload failed (${uploadRes.status})`);
+                    }
+
+                    const uploadData = await uploadRes.json();
+                    if (uploadData.urls && uploadData.urls.length > 0) {
+                        // Success! Use this URL
+                        // If we are replacing the preview (data:image...), we should probably clear strictly local previews
+                        // But simply appending or replacing is tricky.
+                        // Let's assume for this simple app: Single Image per Product.
+                        finalImages = [uploadData.urls[0]];
+                        addToast('Image uploaded successfully!', 'success');
+                    } else {
+                        throw new Error('Upload returned no URLs');
+                    }
+                } catch (uploadError) {
+                    console.error('Upload Error:', uploadError);
+                    addToast('Image upload failed: ' + uploadError.message, 'error');
+                    setUploading(false);
+                    return; // Stop saving
                 }
             }
+
+            // 2. Save Product with the final image URL(s)
+            const body = {
+                title: form.title,
+                description: form.description,
+                price: parseFloat(form.price),
+                stock: parseInt(form.stock),
+                category: form.category,
+                images: finalImages,
+            };
+
+            const url = editingProduct ? `/api/products/${editingProduct._id}` : '/api/products';
+            const method = editingProduct ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+
+            if (res.ok) {
+                addToast(editingProduct ? 'Product updated!' : 'Product created!', 'success');
+                setShowModal(false);
+                setImageFile(null); // Clear file
+                fetchProducts();
+            } else {
+                const data = await res.json();
+                addToast(data.error || 'Failed to save product', 'error');
+            }
         } catch (error) {
-            addToast('Error saving product', 'error');
+            console.error(error);
+            addToast('Error saving product: ' + error.message, 'error');
+        } finally {
+            setUploading(false);
         }
     }
 

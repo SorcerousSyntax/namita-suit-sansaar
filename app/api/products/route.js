@@ -28,32 +28,45 @@ export async function POST(request) {
 
         await dbConnect();
 
-        const formData = await request.formData();
+        let title, description, price, stock, category, images;
 
-        const title = formData.get('title');
-        const description = formData.get('description');
-        const price = formData.get('price');
-        const stock = formData.get('stock');
-        const category = formData.get('category');
-        const imageFile = formData.get('image');
+        const contentType = request.headers.get('content-type') || '';
 
-        let imageUrls = [];
-        if (imageFile) {
-            // Convert file to buffer
-            const bytes = await imageFile.arrayBuffer();
-            const buffer = Buffer.from(bytes);
+        if (contentType.includes('application/json')) {
+            const body = await request.json();
+            title = body.title;
+            description = body.description;
+            price = body.price;
+            stock = body.stock;
+            category = body.category;
+            images = body.images || [];
+        } else {
+            const formData = await request.formData();
+            title = formData.get('title');
+            description = formData.get('description');
+            price = formData.get('price');
+            stock = formData.get('stock');
+            category = formData.get('category');
+            const imageFile = formData.get('image');
 
-            // Upload to Cloudinary
-            const uploadResult = await new Promise((resolve, reject) => {
-                cloudinary.uploader.upload_stream(
-                    { folder: 'namita-suit-sansaar/products' },
-                    (error, result) => {
-                        if (error) reject(error);
-                        else resolve(result);
-                    }
-                ).end(buffer);
-            });
-            imageUrls.push(uploadResult.secure_url);
+            images = [];
+            if (imageFile) {
+                // Convert file to buffer
+                const bytes = await imageFile.arrayBuffer();
+                const buffer = Buffer.from(bytes);
+
+                // Upload to Cloudinary
+                const uploadResult = await new Promise((resolve, reject) => {
+                    cloudinary.uploader.upload_stream(
+                        { folder: 'namita-suit-sansaar/products' },
+                        (error, result) => {
+                            if (error) reject(error);
+                            else resolve(result);
+                        }
+                    ).end(buffer);
+                });
+                images.push(uploadResult.secure_url);
+            }
         }
 
         const product = await Product.create({
@@ -62,7 +75,7 @@ export async function POST(request) {
             price,
             stock,
             category,
-            images: imageUrls,
+            images,
         });
 
         return NextResponse.json({ product }, { status: 201 });
