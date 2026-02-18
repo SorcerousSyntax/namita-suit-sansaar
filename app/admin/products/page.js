@@ -79,8 +79,12 @@ export default function AdminProductsPage() {
     async function handleSave(e) {
         e.preventDefault();
 
+        // DEBUG: Alert state
+        alert(`Debug Save: ImageFile=${imageFile ? 'Yes (' + imageFile.name + ')' : 'No'}, FormImages=${form.images.length}`);
+
         // If no images and no file selected, warn user
         if (form.images.length === 0 && !imageFile && !editingProduct) {
+            alert('STOP: No images selected.');
             if (!confirm('This product has no images. Save anyway?')) return;
         }
 
@@ -94,7 +98,10 @@ export default function AdminProductsPage() {
                 formData.append('images', imageFile);
 
                 try {
+                    alert('Debug: Starting Upload to /api/upload...');
                     const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+
+                    alert(`Debug: Upload Response Status: ${uploadRes.status}`);
 
                     if (!uploadRes.ok) {
                         const err = await uploadRes.json().catch(() => ({}));
@@ -102,6 +109,8 @@ export default function AdminProductsPage() {
                     }
 
                     const uploadData = await uploadRes.json();
+                    alert(`Debug: Upload Data: ${JSON.stringify(uploadData)}`);
+
                     if (uploadData.urls && uploadData.urls.length > 0) {
                         // Success! Use this URL
                         // If we are replacing the preview (data:image...), we should probably clear strictly local previews
@@ -113,11 +122,14 @@ export default function AdminProductsPage() {
                         throw new Error('Upload returned no URLs');
                     }
                 } catch (uploadError) {
+                    alert(`Debug: Upload Error: ${uploadError.message}`);
                     console.error('Upload Error:', uploadError);
                     addToast('Image upload failed: ' + uploadError.message, 'error');
                     setUploading(false);
                     return; // Stop saving
                 }
+            } else {
+                alert('Debug: Skipping upload (no new file)');
             }
 
             // 2. Save Product with the final image URL(s)
@@ -129,6 +141,8 @@ export default function AdminProductsPage() {
                 category: form.category,
                 images: finalImages,
             };
+
+            alert(`Debug: Saving Product with images: ${JSON.stringify(finalImages)}`);
 
             const url = editingProduct ? `/api/products/${editingProduct._id}` : '/api/products';
             const method = editingProduct ? 'PUT' : 'POST';
@@ -146,10 +160,12 @@ export default function AdminProductsPage() {
                 fetchProducts();
             } else {
                 const data = await res.json();
+                alert(`Debug: Product Save Failed: ${data.error}`);
                 addToast(data.error || 'Failed to save product', 'error');
             }
         } catch (error) {
             console.error(error);
+            alert(`Debug: General Error: ${error.message}`);
             addToast('Error saving product: ' + error.message, 'error');
         } finally {
             setUploading(false);
