@@ -23,13 +23,13 @@ export async function POST(request) {
                 return NextResponse.json({ error: 'Only image files are allowed' }, { status: 400 });
             }
 
-            // Limit file size (5MB)
-            const MAX_SIZE = 5 * 1024 * 1024;
+            // Limit file size (4MB to stay within Vercel limits)
+            const MAX_SIZE = 4 * 1024 * 1024;
             if (file.size > MAX_SIZE) {
-                return NextResponse.json({ error: 'Image must be under 5MB' }, { status: 400 });
+                return NextResponse.json({ error: 'Image must be under 4MB' }, { status: 400 });
             }
 
-            // Convert to base64 data URL (works on Vercel)
+            // Convert to base64 data URL (works on Vercel's read-only filesystem)
             const bytes = await file.arrayBuffer();
             const buffer = Buffer.from(bytes);
             const base64 = buffer.toString('base64');
@@ -39,6 +39,10 @@ export async function POST(request) {
 
         return NextResponse.json({ urls });
     } catch (error) {
+        console.error('Upload error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+// Increase body size limit for this route (App Router)
+export const dynamic = 'force-dynamic';
