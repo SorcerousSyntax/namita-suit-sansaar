@@ -63,12 +63,14 @@ export default function AdminProductsPage() {
         try {
             const res = await fetch('/api/upload', { method: 'POST', body: formData });
             const data = await res.json();
-            if (data.urls) {
+            if (res.ok && data.urls) {
                 setForm(prev => ({ ...prev, images: [...prev.images, ...data.urls] }));
                 addToast('Images uploaded!', 'success');
+            } else {
+                addToast(data.error || 'Upload failed', 'error');
             }
         } catch (error) {
-            addToast('Upload failed', 'error');
+            addToast('Upload failed: ' + error.message, 'error');
         } finally {
             setUploading(false);
         }
