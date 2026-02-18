@@ -39,7 +39,28 @@ export async function POST(request) {
             price = body.price;
             stock = body.stock;
             category = body.category;
-            images = body.images || [];
+
+            // Handle Base64 images in JSON
+            images = [];
+            const rawImages = body.images || [];
+
+            for (const img of rawImages) {
+                if (img.startsWith('data:')) {
+                    // Upload Base64 to Cloudinary
+                    try {
+                        const result = await cloudinary.uploader.upload(img, {
+                            folder: 'namita-suit-sansaar/products',
+                        });
+                        images.push(result.secure_url);
+                    } catch (uploadError) {
+                        console.error('Cloudinary Upload Error:', uploadError);
+                        // If upload fails, skip or throw? Let's skip and log.
+                    }
+                } else {
+                    // Already a URL
+                    images.push(img);
+                }
+            }
         } else {
             const formData = await request.formData();
             title = formData.get('title');

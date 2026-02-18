@@ -49,101 +49,98 @@ export default function AdminProductsPage() {
             category: product.category,
             images: product.images || [],
         });
-        setImageFile(null); // Reset image file for editing
         setShowModal(true);
     }
 
-    const [imageFile, setImageFile] = useState(null);
+    // Client-side image compression
+    function compressImage(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_SIZE = 800;
+                    let width = img.width;
+                    let height = img.height;
 
-    // ... (other state)
+                    if (width > height) {
+                        if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        }
+                    } else {
+                        if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                    }
 
-    function handleImageUpload(e) {
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Compress to JPEG at 70% quality
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    resolve(dataUrl);
+                };
+                img.onerror = (err) => reject(new Error('Image load failed'));
+                img.src = e.target.result;
+            };
+            reader.onerror = (err) => reject(new Error('File read failed'));
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function handleImageUpload(e) {
         const files = e.target.files;
         if (!files.length) return;
 
-        // For both Create and Edit, we can optionally just store the file and upload on Save
-        // But for Edit, the user might expect immediate feedback? 
-        // Let's keep it consistent: always store file, upload on Save for reliability.
+        setUploading(true);
+        try {
+            const newImages = [];
+            for (const file of files) {
+                if (!file.type.startsWith('image/')) {
+                    addToast('Only image files are allowed', 'error');
+                    continue;
+                }
+                // Compress and get Base64 string
+                const compressed = await compressImage(file);
+                newImages.push(compressed);
+            }
 
-        const file = files[0];
-        setImageFile(file);
-
-        // Create preview URL
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            setForm(prev => ({ ...prev, images: [e.target.result] }));
-        };
-        reader.readAsDataURL(file);
+            if (newImages.length > 0) {
+                setForm(prev => ({ ...prev, images: [...prev.images, ...newImages] }));
+                addToast('Images processed!', 'success');
+            }
+        } catch (error) {
+            console.error(error);
+            addToast('Failed to process image: ' + error.message, 'error');
+        } finally {
+            setUploading(false);
+            e.target.value = ''; // Reset input
+        }
     }
 
     async function handleSave(e) {
         e.preventDefault();
 
-        // DEBUG: Alert state
-        alert(`Debug Save: ImageFile=${imageFile ? 'Yes (' + imageFile.name + ')' : 'No'}, FormImages=${form.images.length}`);
-
-        // If no images and no file selected, warn user
-        if (form.images.length === 0 && !imageFile && !editingProduct) {
-            alert('STOP: No images selected.');
+        if (form.images.length === 0) {
             if (!confirm('This product has no images. Save anyway?')) return;
         }
 
+        const body = {
+            title: form.title,
+            description: form.description,
+            price: parseFloat(form.price),
+            stock: parseInt(form.stock),
+            category: form.category,
+            images: form.images, // Calls API with Base64 strings (JSON)
+        };
+
         try {
-            let finalImages = [...form.images];
-
-            // 1. If there is a new file selected, upload it first to /api/upload
-            if (imageFile) {
-                setUploading(true); // Show uploading state
-                const formData = new FormData();
-                formData.append('images', imageFile);
-
-                try {
-                    alert('Debug: Starting Upload to /api/upload...');
-                    const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
-
-                    alert(`Debug: Upload Response Status: ${uploadRes.status}`);
-
-                    if (!uploadRes.ok) {
-                        const err = await uploadRes.json().catch(() => ({}));
-                        throw new Error(err.error || `Upload failed (${uploadRes.status})`);
-                    }
-
-                    const uploadData = await uploadRes.json();
-                    alert(`Debug: Upload Data: ${JSON.stringify(uploadData)}`);
-
-                    if (uploadData.urls && uploadData.urls.length > 0) {
-                        // Success! Use this URL
-                        // If we are replacing the preview (data:image...), we should probably clear strictly local previews
-                        // But simply appending or replacing is tricky.
-                        // Let's assume for this simple app: Single Image per Product.
-                        finalImages = [uploadData.urls[0]];
-                        addToast('Image uploaded successfully!', 'success');
-                    } else {
-                        throw new Error('Upload returned no URLs');
-                    }
-                } catch (uploadError) {
-                    alert(`Debug: Upload Error: ${uploadError.message}`);
-                    console.error('Upload Error:', uploadError);
-                    addToast('Image upload failed: ' + uploadError.message, 'error');
-                    setUploading(false);
-                    return; // Stop saving
-                }
-            } else {
-                alert('Debug: Skipping upload (no new file)');
-            }
-
-            // 2. Save Product with the final image URL(s)
-            const body = {
-                title: form.title,
-                description: form.description,
-                price: parseFloat(form.price),
-                stock: parseInt(form.stock),
-                category: form.category,
-                images: finalImages,
-            };
-
-            alert(`Debug: Saving Product with images: ${JSON.stringify(finalImages)}`);
-
             const url = editingProduct ? `/api/products/${editingProduct._id}` : '/api/products';
             const method = editingProduct ? 'PUT' : 'POST';
 
@@ -156,19 +153,14 @@ export default function AdminProductsPage() {
             if (res.ok) {
                 addToast(editingProduct ? 'Product updated!' : 'Product created!', 'success');
                 setShowModal(false);
-                setImageFile(null); // Clear file
                 fetchProducts();
             } else {
                 const data = await res.json();
-                alert(`Debug: Product Save Failed: ${data.error}`);
                 addToast(data.error || 'Failed to save product', 'error');
             }
         } catch (error) {
             console.error(error);
-            alert(`Debug: General Error: ${error.message}`);
             addToast('Error saving product: ' + error.message, 'error');
-        } finally {
-            setUploading(false);
         }
     }
 
