@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { dbConnect } from '@/lib/db';
-import Product from '@/models/Product';
+import Product from '@/lib/models/Product';
 import { requireAdmin } from '@/lib/auth';
 import cloudinary from '@/lib/cloudinary';
 
