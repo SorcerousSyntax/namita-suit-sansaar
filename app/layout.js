@@ -10,6 +10,13 @@ export const metadata = {
     keywords: 'ethnic wear, suits, lehenga, salwar kameez, traditional clothing, Indian fashion',
 };
 
+export const viewport = {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+};
+
+
 export default function RootLayout({ children }) {
     return (
         <html lang="en">
