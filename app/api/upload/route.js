@@ -18,6 +18,15 @@ cloudinary.config({
 });
 
 export async function POST(request) {
+    // Fail fast if config is missing
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+        console.error('[Upload API] Missing configuration');
+        return NextResponse.json(
+            { error: 'Missing Cloudinary Configuration on Server. Please add Environment Variables.' },
+            { status: 500 }
+        );
+    }
+
     try {
         const formData = await request.formData();
         const file = formData.get('file');
