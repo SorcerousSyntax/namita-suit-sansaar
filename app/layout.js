@@ -1,4 +1,4 @@
-import './globals.css';
+// import './globals.css';
 import { AuthProvider } from '@/components/AuthContext';
 import { CartProvider } from '@/components/CartContext';
 import { ToastProvider } from '@/components/ToastContext';
