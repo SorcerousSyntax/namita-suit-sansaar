@@ -5,11 +5,6 @@ import { requireAuth } from '@/lib/auth';
 import Product from '@/lib/models/Product';
 import crypto from 'crypto';
 
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
-
 export async function POST(request) {
     try {
         const auth = await requireAuth();
@@ -77,6 +72,17 @@ export async function POST(request) {
         // Add shipping
         const shipping = totalAmount >= 999 ? 0 : 99;
         totalAmount += shipping;
+
+        // Initialize Razorpay instance lazily to avoid build-time errors if env vars are missing
+        if (!process.env.RAZORPAY_KEY_ID) {
+            console.error('RAZORPAY_KEY_ID is missing');
+            return NextResponse.json({ error: 'Payment configuration error' }, { status: 500 });
+        }
+
+        const razorpay = new Razorpay({
+            key_id: process.env.RAZORPAY_KEY_ID,
+            key_secret: process.env.RAZORPAY_KEY_SECRET,
+        });
 
         // Create Razorpay order (amount is in paise)
         const receiptId = 'rcpt_' + crypto.randomBytes(8).toString('hex');
