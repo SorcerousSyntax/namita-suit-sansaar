@@ -4,6 +4,8 @@ import Order from '@/lib/models/Order';
 import Product from '@/lib/models/Product';
 import { requireAuth, requireAdmin, getCurrentUser } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
     try {
         await dbConnect();

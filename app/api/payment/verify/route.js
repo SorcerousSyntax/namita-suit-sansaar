@@ -5,6 +5,8 @@ import Order from '@/lib/models/Order';
 import Product from '@/lib/models/Product';
 import { requireAuth } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request) {
     try {
         const auth = await requireAuth();
