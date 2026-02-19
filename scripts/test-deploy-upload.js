@@ -16,11 +16,12 @@ function request(url, options, body) {
 }
 
 async function testUpload() {
-    console.log('Testing upload to https://namita-suit-sansaar.vercel.app...');
+    const baseUrl = 'https://namita-suit-sorceroussyntaxs-projects.vercel.app';
+    console.log(`Testing upload to ${baseUrl}...`);
 
     // 1. Login
     const loginData = JSON.stringify({ email: 'admin@namitasuitsansaar.com', password: 'Admin@123' });
-    const loginRes = await request('https://namita-suit-sansaar.vercel.app/api/auth/login', {
+    const loginRes = await request(`${baseUrl}/api/auth/login`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
