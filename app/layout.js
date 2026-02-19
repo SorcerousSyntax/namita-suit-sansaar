@@ -21,14 +21,14 @@ export default function RootLayout({ children }) {
     return (
         <html lang="en">
             <body>
-                <AuthProvider>
-                    <CartProvider>
-                        <ToastProvider>
-                            <Navbar />
-                            <main>{children}</main>
-                        </ToastProvider>
-                    </CartProvider>
-                </AuthProvider>
+                {/* <AuthProvider> */}
+                {/* <CartProvider> */}
+                {/* <ToastProvider> */}
+                {/* <Navbar /> */}
+                <main>{children}</main>
+                {/* </ToastProvider> */}
+                {/* </CartProvider> */}
+                {/* </AuthProvider> */}
             </body>
         </html>
     );
