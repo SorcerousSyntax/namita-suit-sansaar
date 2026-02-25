@@ -53,28 +53,34 @@ export default function AdminProductsPage() {
     }
 
     async function handleImageUpload(e) {
-        const files = e.target.files;
+        const files = Array.from(e.target.files || []);
         if (!files.length) return;
 
         setUploading(true);
-        const formData = new FormData();
-        formData.append('file', files[0]); // Send single file to simplified API
 
         try {
-            const res = await fetch('/api/upload', { method: 'POST', body: formData });
+            const uploadedUrls = [];
 
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                throw new Error(data.error || `Upload failed (${res.status})`);
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || `Upload failed (${res.status})`);
+                }
+
+                const data = await res.json();
+                const urls = Array.isArray(data.urls) ? data.urls : (data.url ? [data.url] : []);
+                if (!urls.length) {
+                    throw new Error('No URL returned from server');
+                }
+                uploadedUrls.push(...urls);
             }
 
-            const data = await res.json();
-            if (data.url) {
-                setForm(prev => ({ ...prev, images: [...prev.images, data.url] }));
-                addToast('Image uploaded!', 'success');
-            } else {
-                throw new Error('No URL returned from server');
-            }
+            setForm(prev => ({ ...prev, images: [...prev.images, ...uploadedUrls] }));
+            addToast(`${uploadedUrls.length} image${uploadedUrls.length > 1 ? 's' : ''} uploaded!`, 'success');
         } catch (error) {
             console.error('Upload error:', error);
             addToast(error.message, 'error');

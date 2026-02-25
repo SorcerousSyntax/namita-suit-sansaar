@@ -29,35 +29,59 @@ export async function POST(request) {
 
     try {
         const formData = await request.formData();
-        const file = formData.get('file');
+        const files = [];
+        const addIfPresent = (value) => {
+            if (value && typeof value.arrayBuffer === 'function') {
+                files.push(value);
+            }
+        };
 
-        if (!file) {
+        // Accept common multipart keys used across the codebase and scripts.
+        addIfPresent(formData.get('file'));
+        addIfPresent(formData.get('image'));
+        for (const candidate of formData.getAll('images')) addIfPresent(candidate);
+        for (const candidate of formData.getAll('files')) addIfPresent(candidate);
+
+        if (!files.length) {
             console.error('[Upload API] No file in request');
             return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
         }
 
-        console.log('[Upload API] Uploading file:', file.name, 'size:', file.size, 'type:', file.type);
+        const uploadOne = async (file) => {
+            console.log('[Upload API] Uploading file:', file.name, 'size:', file.size, 'type:', file.type);
 
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
+            if (file.type && !file.type.startsWith('image/')) {
+                throw new Error(`Unsupported file type for ${file.name || 'file'}. Please upload an image.`);
+            }
 
-        const result = await new Promise((resolve, reject) => {
-            const uploadStream = cloudinary.uploader.upload_stream(
-                { folder: 'namita-suit-sansaar/products' },
-                (error, result) => {
-                    if (error) {
-                        console.error('[Upload API] Cloudinary error:', error);
-                        reject(error);
-                    } else {
-                        console.log('[Upload API] Upload success:', result.secure_url);
-                        resolve(result);
+            const bytes = await file.arrayBuffer();
+            const buffer = Buffer.from(bytes);
+
+            const result = await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                    { folder: 'namita-suit-sansaar/products' },
+                    (error, result) => {
+                        if (error) {
+                            console.error('[Upload API] Cloudinary error:', error);
+                            reject(error);
+                        } else {
+                            console.log('[Upload API] Upload success:', result.secure_url);
+                            resolve(result);
+                        }
                     }
-                }
-            );
-            uploadStream.end(buffer);
-        });
+                );
+                uploadStream.end(buffer);
+            });
 
-        return NextResponse.json({ url: result.secure_url });
+            return result.secure_url;
+        };
+
+        const urls = [];
+        for (const file of files) {
+            urls.push(await uploadOne(file));
+        }
+
+        return NextResponse.json({ url: urls[0], urls });
 
     } catch (error) {
         console.error('[Upload API] Fatal error:', error);
