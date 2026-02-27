@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ToastContext';
+import { openOrderPrintWindow } from '@/lib/printOrder';
 
 export default function AdminOrdersPage() {
     const [orders, setOrders] = useState([]);
@@ -131,17 +132,26 @@ export default function AdminOrdersPage() {
                                         </span>
                                     </td>
                                     <td>
-                                        <select
-                                            className="input"
-                                            value={order.status}
-                                            onChange={e => updateStatus(order._id, e.target.value)}
-                                            style={{ padding: '8px', fontSize: '0.85rem', minWidth: '120px' }}
-                                        >
-                                            <option value="Pending">Pending</option>
-                                            <option value="Paid">Paid</option>
-                                            <option value="Shipped">Shipped</option>
-                                            <option value="Delivered">Delivered</option>
-                                        </select>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            <select
+                                                className="input"
+                                                value={order.status}
+                                                onChange={e => updateStatus(order._id, e.target.value)}
+                                                style={{ padding: '8px', fontSize: '0.85rem', minWidth: '120px' }}
+                                            >
+                                                <option value="Pending">Pending</option>
+                                                <option value="Paid">Paid</option>
+                                                <option value="Shipped">Shipped</option>
+                                                <option value="Delivered">Delivered</option>
+                                            </select>
+                                            <button
+                                                type="button"
+                                                className="btn btn-outline btn-sm"
+                                                onClick={() => openOrderPrintWindow(order, { title: 'Order Details' })}
+                                            >
+                                                Print / Save PDF
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

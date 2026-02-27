@@ -26,16 +26,23 @@ export default function ProductsContent() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('All');
+    const [categoryOpen, setCategoryOpen] = useState(false);
     const searchParams = useSearchParams();
 
     useEffect(() => {
         const cat = searchParams.get('category');
-        if (cat) setCategory(cat);
+        if (cat && categories.includes(cat)) {
+            setCategory(cat);
+        }
     }, [searchParams]);
 
     useEffect(() => {
         fetchProducts();
     }, [category, search]);
+
+    useEffect(() => {
+        setCategoryOpen(false);
+    }, [category]);
 
     async function fetchProducts() {
         setLoading(true);
@@ -61,97 +68,135 @@ export default function ProductsContent() {
                     <p>Discover the perfect ethnic wear for every occasion</p>
                 </div>
 
-                <div style={{ marginBottom: '32px' }}>
-                    <div className="search-bar">
-                        <span className="search-icon">🔍</span>
-                        <input
-                            type="text"
-                            className="input"
-                            placeholder="Search for suits, lehengas, and more..."
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                        />
-                    </div>
-                </div>
+                <div style={{ marginBottom: '24px' }}>
+                    <div
+                        style={{
+                            display: 'grid',
+                            gap: '16px',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                        }}
+                    >
+                        <div className="search-bar" style={{ maxWidth: '100%' }}>
+                            <span className="search-icon">🔍</span>
+                            <input
+                                type="text"
+                                className="input"
+                                placeholder="Search for suits, lehengas, and more..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                            />
+                        </div>
 
-                <div className="products-layout">
-                    <div className="filter-sidebar">
-                        <h3>Categories</h3>
-                        <ul className="filter-list">
-                            {categories.map(cat => (
-                                <li key={cat}>
-                                    <button
-                                        className={category === cat ? 'active' : ''}
-                                        onClick={() => setCategory(cat)}
-                                    >
+                        <div className="input-group desktop-only">
+                            <label>Category</label>
+                            <select
+                                className="input"
+                                value={category}
+                                onChange={e => setCategory(e.target.value)}
+                            >
+                                {categories.map(cat => (
+                                    <option key={cat} value={cat}>
                                         {cat}
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="category-dropdown mobile-only">
+                            <button
+                                type="button"
+                                className="btn btn-secondary category-dropdown-toggle"
+                                onClick={() => setCategoryOpen(prev => !prev)}
+                            >
+                                <span>Category: {category}</span>
+                                <span className={`chevron ${categoryOpen ? 'open' : ''}`}>v</span>
+                            </button>
+                            {categoryOpen && (
+                                <div className="category-dropdown-menu">
+                                    {categories.map(cat => (
+                                        <button
+                                            type="button"
+                                            key={cat}
+                                            className={`category-option ${cat === category ? 'active' : ''}`}
+                                            onClick={() => {
+                                                setCategory(cat);
+                                                setCategoryOpen(false);
+                                            }}
+                                        >
+                                            {cat}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    <div>
-                        {loading ? (
-                            <div className="grid grid-3">
-                                {[1, 2, 3, 4, 5, 6].map(i => (
-                                    <div key={i} className="product-card">
-                                        <div className="skeleton" style={{ aspectRatio: '3/4' }}></div>
-                                        <div style={{ padding: '20px' }}>
-                                            <div className="skeleton" style={{ height: '14px', marginBottom: '8px', width: '50%' }}></div>
-                                            <div className="skeleton" style={{ height: '18px', marginBottom: '12px' }}></div>
-                                            <div className="skeleton" style={{ height: '24px', width: '40%' }}></div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : products.length > 0 ? (
-                            <div className="grid grid-3">
-                                {products.map(product => (
-                                    <Link href={`/products/${product._id}`} key={product._id} className="product-card">
-                                        <div className="product-card-image">
-                                            {product.images && product.images[0] && (product.images[0].startsWith('data:') || product.images[0].startsWith('http')) ? (
-                                                <img src={product.images[0]} alt={product.title} />
-                                            ) : (
-                                                <div style={{
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    background: 'linear-gradient(135deg, #2a2520, #1a1510)',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: '3rem',
-                                                }}>
-                                                    👗
-                                                </div>
-                                            )}
-                                            {product.stock === 0 && (
-                                                <div className="product-card-badge">
-                                                    <span className="badge badge-error">Out of Stock</span>
-                                                </div>
-                                            )}
-                                            {product.stock > 0 && product.stock <= 5 && (
-                                                <div className="product-card-badge">
-                                                    <span className="badge badge-warning">Only {product.stock} left</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="product-card-body">
-                                            <span className="product-card-category">{product.category}</span>
-                                            <h3 className="product-card-title">{product.title}</h3>
-                                            <div className="product-card-price">₹{product.price.toLocaleString('en-IN')}</div>
-                                        </div>
-                                    </Link>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="empty-state">
-                                <div className="empty-state-icon">🔍</div>
-                                <p>No products found. Try a different search or category.</p>
-                            </div>
-                        )}
+                    <div style={{ marginTop: '10px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                        Showing {products.length} result{products.length === 1 ? '' : 's'}
+                        {category !== 'All' ? ` in ${category}` : ''}
                     </div>
                 </div>
+
+                {loading ? (
+                    <div className="grid grid-3">
+                        {[1, 2, 3, 4, 5, 6].map(i => (
+                            <div key={i} className="product-card">
+                                <div className="skeleton" style={{ aspectRatio: '3/4' }}></div>
+                                <div style={{ padding: '20px' }}>
+                                    <div className="skeleton" style={{ height: '14px', marginBottom: '8px', width: '50%' }}></div>
+                                    <div className="skeleton" style={{ height: '18px', marginBottom: '12px' }}></div>
+                                    <div className="skeleton" style={{ height: '24px', width: '40%' }}></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : products.length > 0 ? (
+                    <div className="grid grid-3">
+                        {products.map(product => (
+                            <Link href={`/products/${product._id}`} key={product._id} className="product-card">
+                                <div className="product-card-image">
+                                    {product.images && product.images[0] && (product.images[0].startsWith('data:') || product.images[0].startsWith('http')) ? (
+                                        <img src={product.images[0]} alt={product.title} />
+                                    ) : (
+                                        <div
+                                            style={{
+                                                width: '100%',
+                                                height: '100%',
+                                                background: 'linear-gradient(135deg, #2a2520, #1a1510)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '3rem',
+                                            }}
+                                        >
+                                            👗
+                                        </div>
+                                    )}
+                                    {product.stock === 0 && (
+                                        <div className="product-card-badge">
+                                            <span className="badge badge-error">Out of Stock</span>
+                                        </div>
+                                    )}
+                                    {product.stock > 0 && product.stock <= 5 && (
+                                        <div className="product-card-badge">
+                                            <span className="badge badge-warning">Only {product.stock} left</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="product-card-body">
+                                    <span className="product-card-category">{product.category}</span>
+                                    <h3 className="product-card-title">{product.title}</h3>
+                                    <div className="product-card-price">₹{product.price.toLocaleString('en-IN')}</div>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="empty-state">
+                        <div className="empty-state-icon">🔍</div>
+                        <p>No products found. Try a different search or category.</p>
+                    </div>
+                )}
             </div>
             <Footer />
         </>

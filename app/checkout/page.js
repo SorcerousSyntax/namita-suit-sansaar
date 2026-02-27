@@ -1,10 +1,11 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useCart } from '@/components/CartContext';
 import { useAuth } from '@/components/AuthContext';
 import { useToast } from '@/components/ToastContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { openOrderPrintWindow } from '@/lib/printOrder';
 
 export default function CheckoutPage() {
     const { cartItems, getCartTotal, clearCart } = useCart();
@@ -19,12 +20,16 @@ export default function CheckoutPage() {
     const [loading, setLoading] = useState(false);
     const [orderPlaced, setOrderPlaced] = useState(false);
     const [paymentId, setPaymentId] = useState('');
+    const [razorpayReady, setRazorpayReady] = useState(false);
+    const [receiptOrder, setReceiptOrder] = useState(null);
 
     // Load Razorpay script
     useEffect(() => {
         const script = document.createElement('script');
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
         script.async = true;
+        script.onload = () => setRazorpayReady(true);
+        script.onerror = () => setRazorpayReady(false);
         document.body.appendChild(script);
         return () => {
             document.body.removeChild(script);
@@ -65,13 +70,32 @@ export default function CheckoutPage() {
         );
     }
 
+    const receiptSubtotal = useMemo(() => {
+        if (!receiptOrder) return 0;
+        return (receiptOrder.products || []).reduce((sum, item) => {
+            return sum + (Number(item.price) || 0) * (Number(item.quantity) || 0);
+        }, 0);
+    }, [receiptOrder]);
+
+    const receiptShipping = useMemo(() => {
+        if (!receiptOrder) return 0;
+        const total = Number(receiptOrder.totalAmount) || 0;
+        return Math.max(total - receiptSubtotal, 0);
+    }, [receiptOrder, receiptSubtotal]);
+
     if (orderPlaced) {
+        const orderId = receiptOrder?._id ? `#${receiptOrder._id.slice(-8).toUpperCase()}` : null;
+        const orderDate = receiptOrder?.createdAt
+            ? new Date(receiptOrder.createdAt).toLocaleString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : null;
+        const orderPaymentId = receiptOrder?.razorpayPaymentId || paymentId;
+
         return (
             <div className="confirmation-page fade-in">
                 <div className="confirmation-icon">✅</div>
                 <h1>Payment Successful!</h1>
                 <p>Thank you for your purchase. Your payment has been verified and order has been placed.</p>
-                {paymentId && (
+                {orderPaymentId && (
                     <div style={{
                         background: 'var(--bg-secondary)',
                         border: '1px solid var(--border)',
@@ -81,7 +105,56 @@ export default function CheckoutPage() {
                         maxWidth: '400px',
                     }}>
                         <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Payment ID</div>
-                        <div style={{ fontFamily: 'monospace', color: 'var(--gold)', fontWeight: 600 }}>{paymentId}</div>
+                        <div style={{ fontFamily: 'monospace', color: 'var(--gold)', fontWeight: 600 }}>{orderPaymentId}</div>
+                    </div>
+                )}
+                {receiptOrder && (
+                    <div className="receipt-card">
+                        <div className="receipt-header">
+                            <div>
+                                <div className="receipt-title">Order Receipt</div>
+                                {orderId && <div className="receipt-meta">Order {orderId}</div>}
+                                {orderDate && <div className="receipt-meta">{orderDate}</div>}
+                            </div>
+                            <button
+                                type="button"
+                                className="btn btn-outline btn-sm"
+                                onClick={() => openOrderPrintWindow(receiptOrder, { title: 'Order Receipt' })}
+                            >
+                                Print / Save PDF
+                            </button>
+                        </div>
+
+                            <div className="receipt-section">
+                                <div className="receipt-label">Shipping To</div>
+                                <div className="receipt-value">{receiptOrder.fullName}</div>
+                                <div className="receipt-value">Phone: {receiptOrder.phone}</div>
+                                <div className="receipt-value">Address: {receiptOrder.address}, {receiptOrder.pincode}</div>
+                            </div>
+
+                        <div className="receipt-section">
+                            <div className="receipt-label">Items</div>
+                            {(receiptOrder.products || []).map((item, idx) => (
+                                <div className="receipt-row" key={`${item.productId || idx}`}>
+                                    <span>{item.title} × {item.quantity}</span>
+                                    <span>₹{((Number(item.price) || 0) * (Number(item.quantity) || 0)).toLocaleString('en-IN')}</span>
+                                </div>
+                            ))}
+                            <div className="receipt-row">
+                                <span>Subtotal</span>
+                                <span>₹{receiptSubtotal.toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="receipt-row">
+                                <span>Shipping</span>
+                                <span style={{ color: receiptShipping === 0 ? 'var(--success)' : 'inherit' }}>
+                                    {receiptShipping === 0 ? 'FREE' : `₹${receiptShipping.toLocaleString('en-IN')}`}
+                                </span>
+                            </div>
+                            <div className="receipt-total">
+                                <span>Total</span>
+                                <span>₹{Number(receiptOrder.totalAmount || 0).toLocaleString('en-IN')}</span>
+                            </div>
+                        </div>
                     </div>
                 )}
                 <div style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
@@ -144,6 +217,12 @@ export default function CheckoutPage() {
                 return;
             }
 
+            if (!window.Razorpay) {
+                addToast('Payment gateway failed to load. Please refresh and try again.', 'error');
+                setLoading(false);
+                return;
+            }
+
             // Step 2: Open Razorpay checkout modal
             const options = {
                 key: orderData.key,
@@ -176,6 +255,7 @@ export default function CheckoutPage() {
                         if (verifyRes.ok && verifyData.success) {
                             clearCart();
                             setPaymentId(response.razorpay_payment_id);
+                            setReceiptOrder(verifyData.order || null);
                             setOrderPlaced(true);
                             addToast('Payment successful! Order placed.', 'success');
                         } else {
@@ -264,7 +344,7 @@ export default function CheckoutPage() {
                             </div>
                         </div>
 
-                        <button type="submit" className="btn btn-primary btn-lg" disabled={loading} style={{ marginTop: '8px' }}>
+                        <button type="submit" className="btn btn-primary btn-lg" disabled={loading || !razorpayReady} style={{ marginTop: '8px' }}>
                             {loading ? 'Processing...' : `Pay ₹${(total + shipping).toLocaleString('en-IN')} with Razorpay`}
                         </button>
                     </form>

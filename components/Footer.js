@@ -38,9 +38,9 @@ export default function Footer() {
                     <div>
                         <h4>Contact Us</h4>
                         <ul className="footer-links">
-                            <li>📧 info@namitasuitsansaar.com</li>
-                            <li>📞 +91 98765 43210</li>
-                            <li>📍 Fashion Street, New Delhi</li>
+                            <li>📧 namitasuitsansaar@gmail.com</li>
+                            <li>📞 +91 9315749405</li>
+                            <li>📍 sainik enclave part 2 jharoda kaln, New Delhi</li>
                             <li style={{ marginTop: '16px' }}>
                                 <div style={{ display: 'flex', gap: '12px' }}>
                                     <a href="#" style={{ fontSize: '1.3rem' }}>📘</a>
