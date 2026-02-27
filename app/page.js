@@ -119,17 +119,21 @@ export default function HomePage() {
                             {featured.map(product => (
                                 <Link href={`/products/${product._id}`} key={product._id} className="product-card">
                                     <div className="product-card-image">
-                                        <div style={{
-                                            width: '100%',
-                                            height: '100%',
-                                            background: 'linear-gradient(135deg, #2a2520, #1a1510)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '3rem',
-                                        }}>
-                                            👗
-                                        </div>
+                                        {product.images && product.images[0] && (product.images[0].startsWith('data:') || product.images[0].startsWith('http')) ? (
+                                            <img src={product.images[0]} alt={product.title} />
+                                        ) : (
+                                            <div style={{
+                                                width: '100%',
+                                                height: '100%',
+                                                background: 'linear-gradient(135deg, #2a2520, #1a1510)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '3rem',
+                                            }}>
+                                                👗
+                                            </div>
+                                        )}
                                         {product.stock <= 5 && product.stock > 0 && (
                                             <div className="product-card-badge">
                                                 <span className="badge badge-warning">Only {product.stock} left</span>
