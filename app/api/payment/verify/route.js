@@ -42,7 +42,7 @@ export async function POST(request) {
             );
         }
 
-        // Signature is valid â€” payment is legitimate
+        // Signature is valid — payment is legitimate
         // Now deduct stock (only after verified payment)
         const orderProducts = [];
         for (const item of products) {

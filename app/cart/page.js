@@ -11,13 +11,13 @@ export default function CartPage() {
         return (
             <div className="container">
                 <div className="cart-empty fade-in">
-                    <div style={{ fontSize: '4rem', marginBottom: '16px' }}>ðŸ›’</div>
+                    <div style={{ fontSize: '4rem', marginBottom: '16px' }}>🛒</div>
                     <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', marginBottom: '8px' }}>
                         Your Cart is Empty
                     </h2>
                     <p>Looks like you haven&apos;t added anything yet.</p>
                     <Link href="/products" className="btn btn-primary">
-                        Start Shopping â†’
+                        Start Shopping →
                     </Link>
                 </div>
             </div>
@@ -48,7 +48,7 @@ export default function CartPage() {
                                         justifyContent: 'center',
                                         fontSize: '2rem',
                                     }}>
-                                        ðŸ‘—
+                                        👗
                                     </div>
                                 )}
                             </div>
@@ -57,10 +57,10 @@ export default function CartPage() {
                                 {item.selectedColor && (
                                     <div className="cart-item-meta">Color: {item.selectedColor}</div>
                                 )}
-                                <div className="cart-item-price">â‚¹{item.price.toLocaleString('en-IN')}</div>
+                                <div className="cart-item-price">₹{item.price.toLocaleString('en-IN')}</div>
                                 <div className="cart-item-actions">
                                     <div className="quantity-controls">
-                                        <button onClick={() => updateQuantity(item.cartKey || item._id, item.quantity - 1)}>âˆ’</button>
+                                        <button onClick={() => updateQuantity(item.cartKey || item._id, item.quantity - 1)}>−</button>
                                         <span>{item.quantity}</span>
                                         <button onClick={() => updateQuantity(item.cartKey || item._id, item.quantity + 1)}>+</button>
                                     </div>
@@ -80,25 +80,25 @@ export default function CartPage() {
                     <h3>Order Summary</h3>
                     <div className="cart-summary-row">
                         <span>Subtotal</span>
-                        <span>â‚¹{getCartTotal().toLocaleString('en-IN')}</span>
+                        <span>₹{getCartTotal().toLocaleString('en-IN')}</span>
                     </div>
                     <div className="cart-summary-row">
                         <span>Shipping</span>
                         <span style={{ color: 'var(--success)' }}>
-                            {getCartTotal() >= 999 ? 'FREE' : 'â‚¹99'}
+                            {getCartTotal() >= 999 ? 'FREE' : '₹99'}
                         </span>
                     </div>
                     <div className="cart-summary-total">
                         <span>Total</span>
                         <span style={{ color: 'var(--gold)' }}>
-                            â‚¹{(getCartTotal() + (getCartTotal() >= 999 ? 0 : 99)).toLocaleString('en-IN')}
+                            ₹{(getCartTotal() + (getCartTotal() >= 999 ? 0 : 99)).toLocaleString('en-IN')}
                         </span>
                     </div>
                     <button
                         className="btn btn-primary"
                         onClick={() => router.push('/checkout')}
                     >
-                        Proceed to Checkout â†’
+                        Proceed to Checkout →
                     </button>
                 </div>
             </div>

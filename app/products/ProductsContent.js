@@ -77,7 +77,7 @@ export default function ProductsContent() {
                         }}
                     >
                         <div className="search-bar" style={{ maxWidth: '100%' }}>
-                            <span className="search-icon">ðŸ”</span>
+                            <span className="search-icon">🔍</span>
                             <input
                                 type="text"
                                 className="input"
@@ -169,7 +169,7 @@ export default function ProductsContent() {
                                                 fontSize: '3rem',
                                             }}
                                         >
-                                            ðŸ‘—
+                                            👗
                                         </div>
                                     )}
                                     {product.stock === 0 && (
@@ -201,14 +201,14 @@ export default function ProductsContent() {
                                             )}
                                         </div>
                                     )}
-                                    <div className="product-card-price">â‚¹{product.price.toLocaleString('en-IN')}</div>
+                                    <div className="product-card-price">₹{product.price.toLocaleString('en-IN')}</div>
                                 </div>
                             </Link>
                         ))}
                     </div>
                 ) : (
                     <div className="empty-state">
-                        <div className="empty-state-icon">ðŸ”</div>
+                        <div className="empty-state-icon">🔍</div>
                         <p>No products found. Try a different search or category.</p>
                     </div>
                 )}
