@@ -29,13 +29,13 @@ export default function OrdersPage() {
         return (
             <div className="container">
                 <div className="cart-empty fade-in">
-                    <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🔐</div>
+                    <div style={{ fontSize: '3rem', marginBottom: '16px' }}>ðŸ”</div>
                     <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', marginBottom: '8px' }}>
                         Please Login
                     </h2>
                     <p>You need to be logged in to view your orders.</p>
                     <Link href="/login" className="btn btn-primary" style={{ marginTop: '16px' }}>
-                        Login →
+                        Login â†’
                     </Link>
                 </div>
             </div>
@@ -64,10 +64,10 @@ export default function OrdersPage() {
                 </div>
             ) : orders.length === 0 ? (
                 <div className="empty-state">
-                    <div className="empty-state-icon">📦</div>
+                    <div className="empty-state-icon">ðŸ“¦</div>
                     <p>No orders yet. Start shopping to see your orders here!</p>
                     <Link href="/products" className="btn btn-primary" style={{ marginTop: '16px' }}>
-                        Shop Now →
+                        Shop Now â†’
                     </Link>
                 </div>
             ) : (
@@ -95,19 +95,23 @@ export default function OrdersPage() {
                             <div className="order-items">
                                 {order.products.map((item, idx) => (
                                     <div key={idx} className="order-item">
-                                        <span>{item.title} × {item.quantity}</span>
-                                        <span>₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                                        <span>
+                                            {item.title}
+                                            {item.color ? ` (${item.color})` : ''}
+                                            {' '}Ã— {item.quantity}
+                                        </span>
+                                        <span>â‚¹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
                                     </div>
                                 ))}
                             </div>
 
                             <div className="order-total">
                                 <span>Total</span>
-                                <span>₹{order.totalAmount.toLocaleString('en-IN')}</span>
+                                <span>â‚¹{order.totalAmount.toLocaleString('en-IN')}</span>
                             </div>
 
                             <div style={{ marginTop: '12px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                📍 {order.address} • 📞 {order.phone}
+                                ðŸ“ {order.address} â€¢ ðŸ“ž {order.phone}
                             </div>
                         </div>
                     ))}

@@ -28,7 +28,7 @@ export async function POST(request) {
 
         await dbConnect();
 
-        let title, description, price, stock, category, images;
+        let title, description, price, stock, category, images, colors;
 
         const contentType = request.headers.get('content-type') || '';
 
@@ -39,6 +39,7 @@ export async function POST(request) {
             price = body.price;
             stock = body.stock;
             category = body.category;
+            colors = Array.isArray(body.colors) ? body.colors : [];
 
             // Handle Base64 images in JSON
             images = [];
@@ -68,15 +69,26 @@ export async function POST(request) {
             price = formData.get('price');
             stock = formData.get('stock');
             category = formData.get('category');
-            const imageFile = formData.get('image');
+            const rawColors = formData.getAll('colors') || [];
+            colors = rawColors
+                .flatMap(value => (typeof value === 'string' ? value.split(',') : []))
+                .map(color => color.trim())
+                .filter(Boolean);
 
             images = [];
-            if (imageFile) {
-                // Convert file to buffer
+            const imageFiles = [];
+            const addIfFile = (file) => {
+                if (file && typeof file.arrayBuffer === 'function') {
+                    imageFiles.push(file);
+                }
+            };
+            addIfFile(formData.get('image'));
+            for (const candidate of formData.getAll('images')) addIfFile(candidate);
+
+            for (const imageFile of imageFiles) {
                 const bytes = await imageFile.arrayBuffer();
                 const buffer = Buffer.from(bytes);
 
-                // Upload to Cloudinary
                 const uploadResult = await new Promise((resolve, reject) => {
                     cloudinary.uploader.upload_stream(
                         { folder: 'namita-suit-sansaar/products' },
@@ -97,6 +109,7 @@ export async function POST(request) {
             stock,
             category,
             images,
+            colors,
         });
 
         return NextResponse.json({ product }, { status: 201 });

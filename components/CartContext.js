@@ -11,7 +11,15 @@ export function CartProvider({ children }) {
         const saved = localStorage.getItem('cart');
         if (saved) {
             try {
-                setCartItems(JSON.parse(saved));
+                const parsed = JSON.parse(saved);
+                const normalized = Array.isArray(parsed)
+                    ? parsed.map(item => {
+                        const selectedColor = item.selectedColor || item.color || '';
+                        const cartKey = item.cartKey || `${item._id}::${selectedColor || ''}`;
+                        return { ...item, selectedColor: selectedColor || null, cartKey };
+                    })
+                    : [];
+                setCartItems(normalized);
             } catch (e) {
                 console.error('Cart parse failed:', e);
             }
@@ -25,32 +33,34 @@ export function CartProvider({ children }) {
         }
     }, [cartItems, loaded]);
 
-    function addToCart(product, quantity = 1) {
+    function addToCart(product, quantity = 1, options = {}) {
+        const selectedColor = options?.color || null;
+        const cartKey = `${product._id}::${selectedColor || ''}`;
         setCartItems(prev => {
-            const existing = prev.find(item => item._id === product._id);
+            const existing = prev.find(item => item.cartKey === cartKey);
             if (existing) {
                 return prev.map(item =>
-                    item._id === product._id
+                    item.cartKey === cartKey
                         ? { ...item, quantity: item.quantity + quantity }
                         : item
                 );
             }
-            return [...prev, { ...product, quantity }];
+            return [...prev, { ...product, quantity, selectedColor, cartKey }];
         });
     }
 
-    function removeFromCart(productId) {
-        setCartItems(prev => prev.filter(item => item._id !== productId));
+    function removeFromCart(cartKey) {
+        setCartItems(prev => prev.filter(item => item.cartKey !== cartKey));
     }
 
-    function updateQuantity(productId, quantity) {
+    function updateQuantity(cartKey, quantity) {
         if (quantity < 1) {
-            removeFromCart(productId);
+            removeFromCart(cartKey);
             return;
         }
         setCartItems(prev =>
             prev.map(item =>
-                item._id === productId ? { ...item, quantity } : item
+                item.cartKey === cartKey ? { ...item, quantity } : item
             )
         );
     }

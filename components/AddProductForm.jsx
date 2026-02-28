@@ -3,44 +3,76 @@
 import { useState } from 'react';
 
 export default function AddProductForm() {
-
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState('');
   const [category, setCategory] = useState('');
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
+  const [colorsText, setColorsText] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!file) {
-      alert('Please select an image');
+    if (!files.length) {
+      alert('Please select at least one image');
       return;
     }
 
     setLoading(true);
 
-    const formData = new FormData();
-
-    formData.append('title', title);
-    formData.append('description', description);
-    formData.append('price', price);
-    formData.append('stock', stock);
-    formData.append('category', category);
-    formData.append('image', file);
-
     try {
+      const uploadData = new FormData();
+      files.forEach((file) => uploadData.append('images', file));
+
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadData,
+      });
+
+      const uploadJson = await uploadRes.json();
+      if (!uploadRes.ok) {
+        alert(uploadJson.error || 'Image upload failed');
+        setLoading(false);
+        return;
+      }
+
+      const images = Array.isArray(uploadJson.urls)
+        ? uploadJson.urls
+        : uploadJson.url
+          ? [uploadJson.url]
+          : [];
+
+      if (!images.length) {
+        alert('No image URLs returned from server');
+        setLoading(false);
+        return;
+      }
+
+      const colors = (colorsText || '')
+        .split(',')
+        .map((color) => color.trim())
+        .filter(Boolean);
+
       const res = await fetch('/api/products', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          description,
+          price,
+          stock,
+          category,
+          images,
+          colors,
+        }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        alert('Product added successfully ✅');
+        alert('Product added successfully');
 
         // Reset form
         setTitle('');
@@ -48,11 +80,11 @@ export default function AddProductForm() {
         setPrice('');
         setStock('');
         setCategory('');
-        setFile(null);
+        setFiles([]);
+        setColorsText('');
       } else {
         alert(data.error || 'Something went wrong');
       }
-
     } catch (err) {
       console.error(err);
       alert('Upload failed');
@@ -63,7 +95,6 @@ export default function AddProductForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
-
       <input
         type="text"
         placeholder="Title"
@@ -109,9 +140,18 @@ export default function AddProductForm() {
       />
 
       <input
+        type="text"
+        placeholder="Available Colors (comma separated)"
+        value={colorsText}
+        onChange={(e) => setColorsText(e.target.value)}
+        className="border p-2 w-full"
+      />
+
+      <input
         type="file"
         accept="image/*"
-        onChange={(e) => setFile(e.target.files[0])}
+        multiple
+        onChange={(e) => setFiles(Array.from(e.target.files || []))}
         required
       />
 
@@ -122,7 +162,6 @@ export default function AddProductForm() {
       >
         {loading ? 'Uploading...' : 'Add Product'}
       </button>
-
     </form>
   );
 }

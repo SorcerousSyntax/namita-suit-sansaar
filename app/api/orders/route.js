@@ -62,6 +62,23 @@ export async function POST(request) {
                 );
             }
 
+            const availableColors = Array.isArray(product.colors) ? product.colors.filter(Boolean) : [];
+            const selectedColor = typeof item.color === 'string' ? item.color.trim() : '';
+            if (availableColors.length > 0) {
+                if (!selectedColor) {
+                    return NextResponse.json(
+                        { error: `Please select a color for ${product.title}.` },
+                        { status: 400 }
+                    );
+                }
+                if (!availableColors.includes(selectedColor)) {
+                    return NextResponse.json(
+                        { error: `Selected color is not available for ${product.title}.` },
+                        { status: 400 }
+                    );
+                }
+            }
+
             product.stock -= item.quantity;
             await product.save();
 
@@ -72,6 +89,7 @@ export async function POST(request) {
                 price: product.price,
                 quantity: item.quantity,
                 image: product.images[0] || '',
+                color: selectedColor || null,
             });
         }
 

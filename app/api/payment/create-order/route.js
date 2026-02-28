@@ -61,6 +61,23 @@ export async function POST(request) {
                 );
             }
 
+            const availableColors = Array.isArray(product.colors) ? product.colors.filter(Boolean) : [];
+            const selectedColor = typeof item.color === 'string' ? item.color.trim() : '';
+            if (availableColors.length > 0) {
+                if (!selectedColor) {
+                    return NextResponse.json(
+                        { error: `Please select a color for ${product.title}.` },
+                        { status: 400 }
+                    );
+                }
+                if (!availableColors.includes(selectedColor)) {
+                    return NextResponse.json(
+                        { error: `Selected color is not available for ${product.title}.` },
+                        { status: 400 }
+                    );
+                }
+            }
+
             totalAmount += product.price * item.quantity;
             orderProducts.push({
                 productId: product._id,
@@ -68,6 +85,7 @@ export async function POST(request) {
                 price: product.price,
                 quantity: item.quantity,
                 image: product.images[0] || '',
+                color: selectedColor || null,
             });
         }
 
@@ -76,8 +94,8 @@ export async function POST(request) {
         totalAmount += shipping;
 
         // Initialize Razorpay instance lazily to avoid build-time errors if env vars are missing
-        if (!process.env.RAZORPAY_KEY_ID) {
-            console.error('RAZORPAY_KEY_ID is missing');
+        if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+            console.error('RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET is missing');
             return NextResponse.json({ error: 'Payment configuration error' }, { status: 500 });
         }
 

@@ -14,7 +14,7 @@ export default function AdminProductsPage() {
     const [showModal, setShowModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
     const [form, setForm] = useState({
-        title: '', description: '', price: '', stock: '', category: categories[0], images: [],
+        title: '', description: '', price: '', stock: '', category: categories[0], images: [], colorsText: '',
     });
     const [uploading, setUploading] = useState(false);
     const { addToast } = useToast();
@@ -35,7 +35,7 @@ export default function AdminProductsPage() {
 
     function openAddModal() {
         setEditingProduct(null);
-        setForm({ title: '', description: '', price: '', stock: '', category: categories[0], images: [] });
+        setForm({ title: '', description: '', price: '', stock: '', category: categories[0], images: [], colorsText: '' });
         setShowModal(true);
     }
 
@@ -48,6 +48,7 @@ export default function AdminProductsPage() {
             stock: product.stock.toString(),
             category: product.category,
             images: product.images || [],
+            colorsText: (product.colors || []).join(', '),
         });
         setShowModal(true);
     }
@@ -104,6 +105,10 @@ export default function AdminProductsPage() {
             stock: parseInt(form.stock),
             category: form.category,
             images: form.images,
+            colors: (form.colorsText || '')
+                .split(',')
+                .map(color => color.trim())
+                .filter(Boolean),
         };
 
         try {
@@ -234,6 +239,17 @@ export default function AdminProductsPage() {
                                     <select className="input" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
                                         {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                                     </select>
+                                </div>
+                                <div className="input-group">
+                                    <label>Available Colors</label>
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        placeholder="e.g. Red, Maroon, Navy"
+                                        value={form.colorsText}
+                                        onChange={e => setForm({ ...form, colorsText: e.target.value })}
+                                    />
+                                    <small style={{ color: 'var(--text-muted)' }}>Separate colors with commas.</small>
                                 </div>
                                 <div className="input-group">
                                     <label>Images</label>

@@ -77,7 +77,7 @@ export default function ProductsContent() {
                         }}
                     >
                         <div className="search-bar" style={{ maxWidth: '100%' }}>
-                            <span className="search-icon">🔍</span>
+                            <span className="search-icon">ðŸ”</span>
                             <input
                                 type="text"
                                 className="input"
@@ -169,7 +169,7 @@ export default function ProductsContent() {
                                                 fontSize: '3rem',
                                             }}
                                         >
-                                            👗
+                                            ðŸ‘—
                                         </div>
                                     )}
                                     {product.stock === 0 && (
@@ -186,14 +186,29 @@ export default function ProductsContent() {
                                 <div className="product-card-body">
                                     <span className="product-card-category">{product.category}</span>
                                     <h3 className="product-card-title">{product.title}</h3>
-                                    <div className="product-card-price">₹{product.price.toLocaleString('en-IN')}</div>
+                                    {product.colors && product.colors.length > 0 && (
+                                        <div className="product-card-colors">
+                                            {product.colors.slice(0, 4).map((color) => (
+                                                <span
+                                                    key={color}
+                                                    className="color-dot"
+                                                    style={{ background: color }}
+                                                    title={color}
+                                                ></span>
+                                            ))}
+                                            {product.colors.length > 4 && (
+                                                <span className="color-more">+{product.colors.length - 4}</span>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className="product-card-price">â‚¹{product.price.toLocaleString('en-IN')}</div>
                                 </div>
                             </Link>
                         ))}
                     </div>
                 ) : (
                     <div className="empty-state">
-                        <div className="empty-state-icon">🔍</div>
+                        <div className="empty-state-icon">ðŸ”</div>
                         <p>No products found. Try a different search or category.</p>
                     </div>
                 )}

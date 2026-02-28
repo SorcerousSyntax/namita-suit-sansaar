@@ -67,7 +67,7 @@ export default function AdminOrdersPage() {
                 <div className="loading-spinner"><div className="spinner"></div></div>
             ) : orders.length === 0 ? (
                 <div className="empty-state">
-                    <div className="empty-state-icon">📋</div>
+                    <div className="empty-state-icon">ðŸ“‹</div>
                     <p>No orders yet</p>
                 </div>
             ) : (
@@ -95,22 +95,26 @@ export default function AdminOrdersPage() {
                                         <div>
                                             <div style={{ fontWeight: 600 }}>{order.fullName}</div>
                                             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                                📞 {order.phone}
+                                                ðŸ“ž {order.phone}
                                             </div>
                                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '200px' }}>
-                                                📍 {order.address}, {order.pincode}
+                                                ðŸ“ {order.address}, {order.pincode}
                                             </div>
                                         </div>
                                     </td>
                                     <td>
                                         <div style={{ fontSize: '0.9rem' }}>
                                             {order.products.map((item, i) => (
-                                                <div key={i}>{item.title} × {item.quantity}</div>
+                                                <div key={i}>
+                                                    {item.title}
+                                                    {item.color ? ` (${item.color})` : ''}
+                                                    {' '}Ã— {item.quantity}
+                                                </div>
                                             ))}
                                         </div>
                                     </td>
                                     <td style={{ fontWeight: 700, color: 'var(--gold)' }}>
-                                        ₹{order.totalAmount.toLocaleString('en-IN')}
+                                        â‚¹{order.totalAmount.toLocaleString('en-IN')}
                                     </td>
                                     <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                                         {new Date(order.createdAt).toLocaleDateString('en-IN', {

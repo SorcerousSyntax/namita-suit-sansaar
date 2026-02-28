@@ -40,13 +40,13 @@ export default function CheckoutPage() {
         return (
             <div className="container">
                 <div className="cart-empty fade-in">
-                    <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🔐</div>
+                    <div style={{ fontSize: '3rem', marginBottom: '16px' }}>ðŸ”</div>
                     <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', marginBottom: '8px' }}>
                         Please Login First
                     </h2>
                     <p>You need to be logged in to checkout.</p>
                     <Link href="/login" className="btn btn-primary" style={{ marginTop: '16px' }}>
-                        Login →
+                        Login â†’
                     </Link>
                 </div>
             </div>
@@ -57,13 +57,13 @@ export default function CheckoutPage() {
         return (
             <div className="container">
                 <div className="cart-empty fade-in">
-                    <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🛒</div>
+                    <div style={{ fontSize: '3rem', marginBottom: '16px' }}>ðŸ›’</div>
                     <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.8rem', marginBottom: '8px' }}>
                         Your Cart is Empty
                     </h2>
                     <p>Add some products before checking out.</p>
                     <Link href="/products" className="btn btn-primary" style={{ marginTop: '16px' }}>
-                        Shop Now →
+                        Shop Now â†’
                     </Link>
                 </div>
             </div>
@@ -92,7 +92,7 @@ export default function CheckoutPage() {
 
         return (
             <div className="confirmation-page fade-in">
-                <div className="confirmation-icon">✅</div>
+                <div className="confirmation-icon">âœ…</div>
                 <h1>Payment Successful!</h1>
                 <p>Thank you for your purchase. Your payment has been verified and order has been placed.</p>
                 {orderPaymentId && (
@@ -136,23 +136,27 @@ export default function CheckoutPage() {
                             <div className="receipt-label">Items</div>
                             {(receiptOrder.products || []).map((item, idx) => (
                                 <div className="receipt-row" key={`${item.productId || idx}`}>
-                                    <span>{item.title} × {item.quantity}</span>
-                                    <span>₹{((Number(item.price) || 0) * (Number(item.quantity) || 0)).toLocaleString('en-IN')}</span>
+                                    <span>
+                                        {item.title}
+                                        {item.color ? ` (${item.color})` : ''}
+                                        {' '}x {item.quantity}
+                                    </span>
+                                    <span>â‚¹{((Number(item.price) || 0) * (Number(item.quantity) || 0)).toLocaleString('en-IN')}</span>
                                 </div>
                             ))}
                             <div className="receipt-row">
                                 <span>Subtotal</span>
-                                <span>₹{receiptSubtotal.toLocaleString('en-IN')}</span>
+                                <span>â‚¹{receiptSubtotal.toLocaleString('en-IN')}</span>
                             </div>
                             <div className="receipt-row">
                                 <span>Shipping</span>
                                 <span style={{ color: receiptShipping === 0 ? 'var(--success)' : 'inherit' }}>
-                                    {receiptShipping === 0 ? 'FREE' : `₹${receiptShipping.toLocaleString('en-IN')}`}
+                                    {receiptShipping === 0 ? 'FREE' : `â‚¹${receiptShipping.toLocaleString('en-IN')}`}
                                 </span>
                             </div>
                             <div className="receipt-total">
                                 <span>Total</span>
-                                <span>₹{Number(receiptOrder.totalAmount || 0).toLocaleString('en-IN')}</span>
+                                <span>â‚¹{Number(receiptOrder.totalAmount || 0).toLocaleString('en-IN')}</span>
                             </div>
                         </div>
                     </div>
@@ -201,6 +205,7 @@ export default function CheckoutPage() {
                     products: cartItems.map(item => ({
                         productId: item._id,
                         quantity: item.quantity,
+                        color: item.selectedColor || null,
                     })),
                     fullName,
                     phone: cleanPhone,
@@ -334,18 +339,18 @@ export default function CheckoutPage() {
                             borderRadius: 'var(--radius-md)', marginTop: '8px',
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                🔒 <span>SSL Encrypted</span>
+                                ðŸ”’ <span>SSL Encrypted</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                🛡️ <span>Secure Payment</span>
+                                ðŸ›¡ï¸ <span>Secure Payment</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                ✅ <span>Razorpay Verified</span>
+                                âœ… <span>Razorpay Verified</span>
                             </div>
                         </div>
 
                         <button type="submit" className="btn btn-primary btn-lg" disabled={loading || !razorpayReady} style={{ marginTop: '8px' }}>
-                            {loading ? 'Processing...' : `Pay ₹${(total + shipping).toLocaleString('en-IN')} with Razorpay`}
+                            {loading ? 'Processing...' : `Pay â‚¹${(total + shipping).toLocaleString('en-IN')} with Razorpay`}
                         </button>
                     </form>
                 </div>
@@ -355,18 +360,22 @@ export default function CheckoutPage() {
                         Order Summary
                     </h3>
                     {cartItems.map(item => (
-                        <div key={item._id} className="cart-summary-row">
-                            <span>{item.title} × {item.quantity}</span>
-                            <span>₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
+                        <div key={item.cartKey || item._id} className="cart-summary-row">
+                            <span>
+                                {item.title}
+                                {item.selectedColor ? ` (${item.selectedColor})` : ''}
+                                {' '}x {item.quantity}
+                            </span>
+                            <span>â‚¹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
                         </div>
                     ))}
                     <div className="cart-summary-row">
                         <span>Shipping</span>
-                        <span style={{ color: 'var(--success)' }}>{shipping === 0 ? 'FREE' : `₹${shipping}`}</span>
+                        <span style={{ color: 'var(--success)' }}>{shipping === 0 ? 'FREE' : `â‚¹${shipping}`}</span>
                     </div>
                     <div className="cart-summary-total">
                         <span>Total</span>
-                        <span style={{ color: 'var(--gold)' }}>₹{(total + shipping).toLocaleString('en-IN')}</span>
+                        <span style={{ color: 'var(--gold)' }}>â‚¹{(total + shipping).toLocaleString('en-IN')}</span>
                     </div>
 
                     <div style={{
@@ -379,7 +388,7 @@ export default function CheckoutPage() {
                             Razorpay
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                            UPI • Cards • Net Banking • Wallets
+                            UPI â€¢ Cards â€¢ Net Banking â€¢ Wallets
                         </div>
                     </div>
                 </div>

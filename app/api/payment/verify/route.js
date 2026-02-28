@@ -42,8 +42,9 @@ export async function POST(request) {
             );
         }
 
-        // Signature is valid — payment is legitimate
+        // Signature is valid â€” payment is legitimate
         // Now deduct stock (only after verified payment)
+        const orderProducts = [];
         for (const item of products) {
             const product = await Product.findById(item.productId);
             if (!product) {
@@ -58,14 +59,41 @@ export async function POST(request) {
                     { status: 400 }
                 );
             }
+
+            const availableColors = Array.isArray(product.colors) ? product.colors.filter(Boolean) : [];
+            const selectedColor = typeof item.color === 'string' ? item.color.trim() : '';
+            if (availableColors.length > 0) {
+                if (!selectedColor) {
+                    return NextResponse.json(
+                        { error: `Please select a color for ${product.title}.` },
+                        { status: 400 }
+                    );
+                }
+                if (!availableColors.includes(selectedColor)) {
+                    return NextResponse.json(
+                        { error: `Selected color is not available for ${product.title}.` },
+                        { status: 400 }
+                    );
+                }
+            }
+
             product.stock -= item.quantity;
             await product.save();
+
+            orderProducts.push({
+                productId: product._id,
+                title: item.title || product.title,
+                price: item.price || product.price,
+                quantity: item.quantity,
+                image: item.image || product.images?.[0] || '',
+                color: selectedColor || null,
+            });
         }
 
         // Create order in database with payment details
         const order = await Order.create({
             userId: auth.user.userId,
-            products,
+            products: orderProducts,
             totalAmount,
             fullName,
             phone,

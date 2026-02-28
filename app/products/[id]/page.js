@@ -15,6 +15,7 @@ export default function ProductDetailPage() {
     const [loading, setLoading] = useState(true);
     const [quantity, setQuantity] = useState(1);
     const [selectedImage, setSelectedImage] = useState(0);
+    const [selectedColor, setSelectedColor] = useState('');
 
     useEffect(() => {
         fetchProduct();
@@ -26,6 +27,11 @@ export default function ProductDetailPage() {
             const data = await res.json();
             if (data.product) {
                 setProduct(data.product);
+                if (Array.isArray(data.product.colors) && data.product.colors.length > 0) {
+                    setSelectedColor(data.product.colors[0]);
+                } else {
+                    setSelectedColor('');
+                }
             } else {
                 router.push('/products');
             }
@@ -38,7 +44,11 @@ export default function ProductDetailPage() {
 
     function handleAddToCart() {
         if (!product || product.stock === 0) return;
-        addToCart(product, quantity);
+        if (product.colors && product.colors.length > 0 && !selectedColor) {
+            addToast('Please select a color', 'error');
+            return;
+        }
+        addToCart(product, quantity, { color: selectedColor || null });
         addToast(`${product.title} added to cart!`, 'success');
     }
 
@@ -121,6 +131,25 @@ export default function ProductDetailPage() {
                                 <span style={{ color: 'var(--error)' }}>Out of Stock</span>
                             )}
                         </div>
+
+                        {product.colors && product.colors.length > 0 && (
+                            <div className="color-selector">
+                                <label>Color:</label>
+                                <div className="color-options">
+                                    {product.colors.map((color) => (
+                                        <button
+                                            key={color}
+                                            type="button"
+                                            className={`color-chip ${selectedColor === color ? 'active' : ''}`}
+                                            onClick={() => setSelectedColor(color)}
+                                        >
+                                            <span className="color-swatch" style={{ background: color }}></span>
+                                            <span>{color}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {product.stock > 0 && (
                             <>

@@ -968,6 +968,28 @@ tr:hover td {
   overflow: hidden;
 }
 
+.product-card-colors {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.product-card-colors .color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+}
+
+.product-card-colors .color-more {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-left: 2px;
+}
+
 .product-card-price {
   font-size: 1.3rem;
   font-weight: 700;
@@ -1273,6 +1295,57 @@ tr:hover td {
   background: var(--error);
 }
 
+.color-selector {
+  margin-bottom: 24px;
+}
+
+.color-selector label {
+  font-weight: 500;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.color-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.color-chip {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.color-chip:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.color-chip.active {
+  border-color: var(--gold);
+  background: rgba(212, 168, 83, 0.15);
+  color: var(--gold);
+}
+
 .quantity-selector {
   display: flex;
   align-items: center;
@@ -1370,6 +1443,12 @@ tr:hover td {
 .cart-item-title {
   font-weight: 600;
   margin-bottom: 4px;
+}
+
+.cart-item-meta {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
 }
 
 .cart-item-price {
