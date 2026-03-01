@@ -3,7 +3,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useCart } from '@/components/CartContext';
 import { useAuth } from '@/components/AuthContext';
 import { useToast } from '@/components/ToastContext';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { openOrderPrintWindow } from '@/lib/printOrder';
 
@@ -11,7 +10,6 @@ export default function CheckoutPage() {
     const { cartItems, getCartTotal, clearCart } = useCart();
     const { user } = useAuth();
     const { addToast } = useToast();
-    const router = useRouter();
 
     const [fullName, setFullName] = useState('');
     const [phone, setPhone] = useState('');
@@ -22,6 +20,7 @@ export default function CheckoutPage() {
     const [paymentId, setPaymentId] = useState('');
     const [razorpayReady, setRazorpayReady] = useState(false);
     const [receiptOrder, setReceiptOrder] = useState(null);
+    const waivedDeliveryCharge = 99;
 
     // Load Razorpay script
     useEffect(() => {
@@ -35,6 +34,33 @@ export default function CheckoutPage() {
             document.body.removeChild(script);
         };
     }, []);
+
+    useEffect(() => {
+        let mounted = true;
+
+        async function loadSavedBilling() {
+            if (!user) return;
+            try {
+                const res = await fetch('/api/auth/me');
+                if (!res.ok) return;
+                const data = await res.json();
+                const billing = data?.user?.billingInfo;
+                if (!billing || !mounted) return;
+
+                setFullName(prev => prev || billing.fullName || '');
+                setPhone(prev => prev || billing.phone || '');
+                setAddress(prev => prev || billing.address || '');
+                setPincode(prev => prev || billing.pincode || '');
+            } catch (error) {
+                // Billing prefill is best-effort only.
+            }
+        }
+
+        loadSavedBilling();
+        return () => {
+            mounted = false;
+        };
+    }, [user]);
 
     if (!user) {
         return (
@@ -76,12 +102,6 @@ export default function CheckoutPage() {
             return sum + (Number(item.price) || 0) * (Number(item.quantity) || 0);
         }, 0);
     }, [receiptOrder]);
-
-    const receiptShipping = useMemo(() => {
-        if (!receiptOrder) return 0;
-        const total = Number(receiptOrder.totalAmount) || 0;
-        return Math.max(total - receiptSubtotal, 0);
-    }, [receiptOrder, receiptSubtotal]);
 
     if (orderPlaced) {
         const orderId = receiptOrder?._id ? `#${receiptOrder._id.slice(-8).toUpperCase()}` : null;
@@ -149,9 +169,12 @@ export default function CheckoutPage() {
                                 <span>₹{receiptSubtotal.toLocaleString('en-IN')}</span>
                             </div>
                             <div className="receipt-row">
-                                <span>Shipping</span>
-                                <span style={{ color: receiptShipping === 0 ? 'var(--success)' : 'inherit' }}>
-                                    {receiptShipping === 0 ? 'FREE' : `₹${receiptShipping.toLocaleString('en-IN')}`}
+                                <span>Delivery Charges</span>
+                                <span>
+                                    <span style={{ textDecoration: 'line-through', color: 'var(--text-muted)' }}>
+                                        ₹{waivedDeliveryCharge.toLocaleString('en-IN')}
+                                    </span>
+                                    <span style={{ color: 'var(--success)', marginLeft: '8px' }}>Waived off</span>
                                 </span>
                             </div>
                             <div className="receipt-total">
@@ -247,7 +270,6 @@ export default function CheckoutPage() {
                                 razorpay_payment_id: response.razorpay_payment_id,
                                 razorpay_signature: response.razorpay_signature,
                                 products: orderData.products,
-                                totalAmount: orderData.totalAmount,
                                 fullName,
                                 phone: cleanPhone,
                                 address,
@@ -300,7 +322,6 @@ export default function CheckoutPage() {
     }
 
     const total = getCartTotal();
-    const shipping = total >= 999 ? 0 : 99;
 
     return (
         <div className="container checkout-page fade-in">
@@ -350,7 +371,7 @@ export default function CheckoutPage() {
                         </div>
 
                         <button type="submit" className="btn btn-primary btn-lg" disabled={loading || !razorpayReady} style={{ marginTop: '8px' }}>
-                            {loading ? 'Processing...' : `Pay ₹${(total + shipping).toLocaleString('en-IN')} with Razorpay`}
+                            {loading ? 'Processing...' : `Pay ₹${total.toLocaleString('en-IN')} with Razorpay`}
                         </button>
                     </form>
                 </div>
@@ -370,12 +391,15 @@ export default function CheckoutPage() {
                         </div>
                     ))}
                     <div className="cart-summary-row">
-                        <span>Shipping</span>
-                        <span style={{ color: 'var(--success)' }}>{shipping === 0 ? 'FREE' : `₹${shipping}`}</span>
+                        <span>Delivery Charges</span>
+                        <span>
+                            <span style={{ textDecoration: 'line-through', color: 'var(--text-muted)' }}>₹{waivedDeliveryCharge}</span>
+                            <span style={{ color: 'var(--success)', marginLeft: '8px' }}>Waived off</span>
+                        </span>
                     </div>
                     <div className="cart-summary-total">
                         <span>Total</span>
-                        <span style={{ color: 'var(--gold)' }}>₹{(total + shipping).toLocaleString('en-IN')}</span>
+                        <span style={{ color: 'var(--gold)' }}>₹{total.toLocaleString('en-IN')}</span>
                     </div>
 
                     <div style={{

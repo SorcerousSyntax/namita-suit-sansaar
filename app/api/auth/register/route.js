@@ -49,7 +49,14 @@ export async function POST(request) {
         const response = NextResponse.json(
             {
                 message: 'Registration successful',
-                user: { id: user._id, name: user.name, email: user.email, role: user.role },
+                user: {
+                    id: user._id.toString(),
+                    userId: user._id.toString(),
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    billingInfo: user.billingInfo || null,
+                },
             },
             { status: 201 }
         );

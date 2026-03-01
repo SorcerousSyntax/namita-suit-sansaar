@@ -6,6 +6,7 @@ import Link from 'next/link';
 export default function CartPage() {
     const { cartItems, removeFromCart, updateQuantity, getCartTotal, getCartCount } = useCart();
     const router = useRouter();
+    const waivedDeliveryCharge = 99;
 
     if (cartItems.length === 0) {
         return (
@@ -83,15 +84,18 @@ export default function CartPage() {
                         <span>₹{getCartTotal().toLocaleString('en-IN')}</span>
                     </div>
                     <div className="cart-summary-row">
-                        <span>Shipping</span>
-                        <span style={{ color: 'var(--success)' }}>
-                            {getCartTotal() >= 999 ? 'FREE' : '₹99'}
+                        <span>Delivery Charges</span>
+                        <span>
+                            <span style={{ textDecoration: 'line-through', color: 'var(--text-muted)' }}>
+                                ₹{waivedDeliveryCharge}
+                            </span>
+                            <span style={{ color: 'var(--success)', marginLeft: '8px' }}>Waived off</span>
                         </span>
                     </div>
                     <div className="cart-summary-total">
                         <span>Total</span>
                         <span style={{ color: 'var(--gold)' }}>
-                            ₹{(getCartTotal() + (getCartTotal() >= 999 ? 0 : 99)).toLocaleString('en-IN')}
+                            ₹{getCartTotal().toLocaleString('en-IN')}
                         </span>
                     </div>
                     <button

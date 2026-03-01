@@ -207,7 +207,7 @@ export default function HomePage() {
                         <div className="feature-card">
                             <div className="feature-icon">🚚</div>
                             <h3>Fast Delivery</h3>
-                            <p>Free shipping on orders above ₹999. Delivered to your doorstep within 5-7 days</p>
+                            <p>Delivery charges waived off on all orders. Delivered to your doorstep within 5-7 days</p>
                         </div>
                         <div className="feature-card">
                             <div className="feature-icon">💎</div>

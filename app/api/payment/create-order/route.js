@@ -47,6 +47,14 @@ export async function POST(request) {
         const orderProducts = [];
 
         for (const item of products) {
+            const quantity = Number(item.quantity);
+            if (!Number.isInteger(quantity) || quantity < 1) {
+                return NextResponse.json(
+                    { error: 'Quantity must be a positive integer for all products.' },
+                    { status: 400 }
+                );
+            }
+
             const product = await Product.findById(item.productId);
             if (!product) {
                 return NextResponse.json(
@@ -54,7 +62,7 @@ export async function POST(request) {
                     { status: 404 }
                 );
             }
-            if (product.stock < item.quantity) {
+            if (product.stock < quantity) {
                 return NextResponse.json(
                     { error: `Insufficient stock for ${product.title}. Only ${product.stock} left.` },
                     { status: 400 }
@@ -78,20 +86,16 @@ export async function POST(request) {
                 }
             }
 
-            totalAmount += product.price * item.quantity;
+            totalAmount += product.price * quantity;
             orderProducts.push({
                 productId: product._id,
                 title: product.title,
                 price: product.price,
-                quantity: item.quantity,
+                quantity,
                 image: product.images[0] || '',
                 color: selectedColor || null,
             });
         }
-
-        // Add shipping
-        const shipping = totalAmount >= 999 ? 0 : 99;
-        totalAmount += shipping;
 
         // Initialize Razorpay instance lazily to avoid build-time errors if env vars are missing
         if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
@@ -123,6 +127,7 @@ export async function POST(request) {
             currency: razorpayOrder.currency,
             products: orderProducts,
             totalAmount,
+            waivedDeliveryCharge: 99,
             key: process.env.RAZORPAY_KEY_ID,
         });
     } catch (error) {
