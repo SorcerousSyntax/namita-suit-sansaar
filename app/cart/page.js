@@ -37,8 +37,9 @@ export default function CartPage() {
                     {cartItems.map(item => (
                         <div key={item.cartKey || item._id} className="cart-item">
                             <div className="cart-item-image">
-                                {item.images && item.images[0] && !item.images[0].startsWith('/uploads/sample') ? (
-                                    <img src={item.images[0]} alt={item.title} />
+                                {((item.selectedColorImage && (item.selectedColorImage.startsWith('data:') || item.selectedColorImage.startsWith('http')))
+                                    || (item.images && item.images[0] && !item.images[0].startsWith('/uploads/sample'))) ? (
+                                    <img src={item.selectedColorImage || item.images[0]} alt={item.title} />
                                 ) : (
                                     <div style={{
                                         width: '100%',

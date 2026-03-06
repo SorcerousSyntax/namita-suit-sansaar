@@ -15,8 +15,14 @@ export function CartProvider({ children }) {
                 const normalized = Array.isArray(parsed)
                     ? parsed.map(item => {
                         const selectedColor = item.selectedColor || item.color || '';
+                        const selectedColorImage = item.selectedColorImage || null;
                         const cartKey = item.cartKey || `${item._id}::${selectedColor || ''}`;
-                        return { ...item, selectedColor: selectedColor || null, cartKey };
+                        return {
+                            ...item,
+                            selectedColor: selectedColor || null,
+                            selectedColorImage,
+                            cartKey,
+                        };
                     })
                     : [];
                 setCartItems(normalized);
@@ -35,17 +41,22 @@ export function CartProvider({ children }) {
 
     function addToCart(product, quantity = 1, options = {}) {
         const selectedColor = options?.color || null;
+        const selectedColorImage = options?.image || null;
         const cartKey = `${product._id}::${selectedColor || ''}`;
         setCartItems(prev => {
             const existing = prev.find(item => item.cartKey === cartKey);
             if (existing) {
                 return prev.map(item =>
                     item.cartKey === cartKey
-                        ? { ...item, quantity: item.quantity + quantity }
+                        ? {
+                            ...item,
+                            quantity: item.quantity + quantity,
+                            selectedColorImage: selectedColorImage || item.selectedColorImage || null,
+                        }
                         : item
                 );
             }
-            return [...prev, { ...product, quantity, selectedColor, cartKey }];
+            return [...prev, { ...product, quantity, selectedColor, selectedColorImage, cartKey }];
         });
     }
 

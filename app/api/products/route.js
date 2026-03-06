@@ -6,6 +6,16 @@ import cloudinary from '@/lib/cloudinary';
 
 export const dynamic = 'force-dynamic';
 
+function normalizeColorVariants(rawVariants) {
+    if (!Array.isArray(rawVariants)) return [];
+    return rawVariants
+        .map(variant => ({
+            color: typeof variant?.color === 'string' ? variant.color.trim() : '',
+            image: typeof variant?.image === 'string' ? variant.image.trim() : '',
+        }))
+        .filter(variant => variant.color && variant.image);
+}
+
 export async function GET(request) {
     try {
         await dbConnect();
@@ -28,7 +38,7 @@ export async function POST(request) {
 
         await dbConnect();
 
-        let title, description, price, stock, category, images, colors;
+        let title, description, price, stock, category, images, colors, colorVariants;
 
         const contentType = request.headers.get('content-type') || '';
 
@@ -39,7 +49,14 @@ export async function POST(request) {
             price = body.price;
             stock = body.stock;
             category = body.category;
-            colors = Array.isArray(body.colors) ? body.colors : [];
+            colorVariants = normalizeColorVariants(body.colorVariants);
+            const rawColors = Array.isArray(body.colors) ? body.colors : [];
+            colors = (colorVariants.length > 0
+                ? colorVariants.map(variant => variant.color)
+                : rawColors
+            )
+                .map(color => (typeof color === 'string' ? color.trim() : ''))
+                .filter(Boolean);
 
             // Handle Base64 images in JSON
             images = [];
@@ -70,10 +87,23 @@ export async function POST(request) {
             stock = formData.get('stock');
             category = formData.get('category');
             const rawColors = formData.getAll('colors') || [];
+            let parsedColorVariants = [];
+            const colorVariantsJson = formData.get('colorVariants');
+            if (typeof colorVariantsJson === 'string' && colorVariantsJson.trim()) {
+                try {
+                    parsedColorVariants = JSON.parse(colorVariantsJson);
+                } catch (error) {
+                    parsedColorVariants = [];
+                }
+            }
+            colorVariants = normalizeColorVariants(parsedColorVariants);
             colors = rawColors
                 .flatMap(value => (typeof value === 'string' ? value.split(',') : []))
                 .map(color => color.trim())
                 .filter(Boolean);
+            if (colorVariants.length > 0) {
+                colors = colorVariants.map(variant => variant.color);
+            }
 
             images = [];
             const imageFiles = [];
@@ -110,6 +140,7 @@ export async function POST(request) {
             category,
             images,
             colors,
+            colorVariants,
         });
 
         return NextResponse.json({ product }, { status: 201 });

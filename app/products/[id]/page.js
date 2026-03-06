@@ -1,25 +1,77 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useCart } from '@/components/CartContext';
 import { useToast } from '@/components/ToastContext';
 import Link from 'next/link';
 import Footer from '@/components/Footer';
 
+function getColorVariants(product) {
+    if (!product) return [];
+
+    if (Array.isArray(product.colorVariants) && product.colorVariants.length > 0) {
+        return product.colorVariants
+            .map(variant => ({
+                color: (variant?.color || '').trim(),
+                image: (variant?.image || '').trim(),
+            }))
+            .filter(variant => variant.color && variant.image);
+    }
+
+    const images = Array.isArray(product.images) ? product.images : [];
+    const colors = Array.isArray(product.colors) ? product.colors : [];
+    return colors
+        .map((color, index) => ({
+            color,
+            image: images[index] || images[0] || '',
+        }))
+        .filter(variant => variant.color && variant.image);
+}
+
 export default function ProductDetailPage() {
     const { id } = useParams();
     const router = useRouter();
     const { addToCart } = useCart();
     const { addToast } = useToast();
+
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [quantity, setQuantity] = useState(1);
     const [selectedImage, setSelectedImage] = useState(0);
     const [selectedColor, setSelectedColor] = useState('');
 
+    const colorVariants = useMemo(() => getColorVariants(product), [product]);
+
     useEffect(() => {
         fetchProduct();
     }, [id]);
+
+    useEffect(() => {
+        if (!product) return;
+
+        if (colorVariants.length > 0) {
+            setSelectedColor(colorVariants[0].color);
+        } else if (Array.isArray(product.colors) && product.colors.length > 0) {
+            setSelectedColor(product.colors[0]);
+        } else {
+            setSelectedColor('');
+        }
+
+        setSelectedImage(0);
+    }, [product, colorVariants]);
+
+    useEffect(() => {
+        if (!product || !selectedColor || colorVariants.length === 0) return;
+
+        const variant = colorVariants.find(item => item.color === selectedColor);
+        if (!variant?.image) return;
+
+        const imageList = Array.isArray(product.images) ? product.images : [];
+        const matchedIndex = imageList.findIndex(image => image === variant.image);
+        if (matchedIndex >= 0) {
+            setSelectedImage(matchedIndex);
+        }
+    }, [selectedColor, product, colorVariants]);
 
     async function fetchProduct() {
         try {
@@ -27,11 +79,6 @@ export default function ProductDetailPage() {
             const data = await res.json();
             if (data.product) {
                 setProduct(data.product);
-                if (Array.isArray(data.product.colors) && data.product.colors.length > 0) {
-                    setSelectedColor(data.product.colors[0]);
-                } else {
-                    setSelectedColor('');
-                }
             } else {
                 router.push('/products');
             }
@@ -44,11 +91,18 @@ export default function ProductDetailPage() {
 
     function handleAddToCart() {
         if (!product || product.stock === 0) return;
-        if (product.colors && product.colors.length > 0 && !selectedColor) {
+
+        const hasColors = (Array.isArray(product.colors) && product.colors.length > 0) || colorVariants.length > 0;
+        if (hasColors && !selectedColor) {
             addToast('Please select a color', 'error');
             return;
         }
-        addToCart(product, quantity, { color: selectedColor || null });
+
+        const selectedVariant = colorVariants.find(variant => variant.color === selectedColor);
+        addToCart(product, quantity, {
+            color: selectedColor || null,
+            image: selectedVariant?.image || null,
+        });
         addToast(`${product.title} added to cart!`, 'success');
     }
 
@@ -71,20 +125,24 @@ export default function ProductDetailPage() {
 
     if (!product) return null;
 
+    const images = Array.isArray(product.images) ? product.images : [];
+    const selectedVariant = colorVariants.find(variant => variant.color === selectedColor);
+    const displayImage = selectedVariant?.image || images[selectedImage] || images[0] || '';
+
     return (
         <>
             <div className="container product-detail fade-in">
                 <div style={{ marginBottom: '24px' }}>
                     <Link href="/products" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                        ← Back to Products
+                        Back to Products
                     </Link>
                 </div>
 
                 <div className="product-detail-grid">
                     <div className="product-gallery">
                         <div className="product-main-image">
-                            {product.images && product.images.length > 0 && (product.images[0].startsWith('data:') || product.images[0].startsWith('http')) ? (
-                                <img src={product.images[selectedImage] || product.images[0]} alt={product.title} />
+                            {displayImage && (displayImage.startsWith('data:') || displayImage.startsWith('http')) ? (
+                                <img src={displayImage} alt={product.title} />
                             ) : (
                                 <div style={{
                                     width: '100%',
@@ -93,21 +151,23 @@ export default function ProductDetailPage() {
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    fontSize: '6rem',
+                                    fontSize: '3rem',
                                 }}>
-                                    👗
+                                    IMG
                                 </div>
                             )}
                         </div>
-                        {product.images && product.images.length > 1 && (
+
+                        {images.length > 1 && (
                             <div className="product-thumbnails">
-                                {product.images.map((img, i) => (
+                                {images.map((img, index) => (
                                     <button
-                                        key={i}
-                                        className={`product-thumb ${selectedImage === i ? 'active' : ''}`}
-                                        onClick={() => setSelectedImage(i)}
+                                        key={`${img}-${index}`}
+                                        type="button"
+                                        className={`product-thumb ${selectedImage === index ? 'active' : ''}`}
+                                        onClick={() => setSelectedImage(index)}
                                     >
-                                        <img src={img} alt={`${product.title} ${i + 1}`} />
+                                        <img src={img} alt={`${product.title} ${index + 1}`} />
                                     </button>
                                 ))}
                             </div>
@@ -117,7 +177,7 @@ export default function ProductDetailPage() {
                     <div className="product-info">
                         <span className="category-label">{product.category}</span>
                         <h1>{product.title}</h1>
-                        <div className="product-price-tag">₹{product.price.toLocaleString('en-IN')}</div>
+                        <div className="product-price-tag">Rs {Number(product.price || 0).toLocaleString('en-IN')}</div>
 
                         <p className="product-description">{product.description}</p>
 
@@ -132,11 +192,14 @@ export default function ProductDetailPage() {
                             )}
                         </div>
 
-                        {product.colors && product.colors.length > 0 && (
+                        {((Array.isArray(product.colors) && product.colors.length > 0) || colorVariants.length > 0) && (
                             <div className="color-selector">
                                 <label>Color:</label>
                                 <div className="color-options">
-                                    {product.colors.map((color) => (
+                                    {(colorVariants.length > 0
+                                        ? colorVariants.map(variant => variant.color)
+                                        : product.colors
+                                    ).map(color => (
                                         <button
                                             key={color}
                                             type="button"
@@ -156,14 +219,14 @@ export default function ProductDetailPage() {
                                 <div className="quantity-selector">
                                     <label>Quantity:</label>
                                     <div className="quantity-controls">
-                                        <button onClick={() => setQuantity(Math.max(1, quantity - 1))}>−</button>
+                                        <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))}>-</button>
                                         <span>{quantity}</span>
-                                        <button onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}>+</button>
+                                        <button type="button" onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}>+</button>
                                     </div>
                                 </div>
 
                                 <button className="btn btn-primary btn-lg" onClick={handleAddToCart}>
-                                    🛒 Add to Cart
+                                    Add to Cart
                                 </button>
                             </>
                         )}

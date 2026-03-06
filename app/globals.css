@@ -44,6 +44,8 @@
 
 html {
   scroll-behavior: smooth;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -53,6 +55,14 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+main {
+  width: 100%;
+  overflow-x: clip;
 }
 
 a {
@@ -646,8 +656,21 @@ tr:hover td {
 }
 
 @media (max-width: 768px) {
+  .container,
+  .container-sm {
+    padding: 0 14px;
+  }
+
   .mobile-menu-btn {
     display: block;
+  }
+
+  .navbar-brand {
+    font-size: 1.1rem;
+    max-width: calc(100vw - 88px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .navbar-links {
@@ -1615,6 +1638,10 @@ tr:hover td {
     display: none;
   }
 
+  .admin-content {
+    padding: 16px;
+  }
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1961,6 +1988,26 @@ tr:hover td {
   border-top: 3px solid var(--gold);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+}
+
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .modal {
+    padding: 20px 14px;
+  }
+
+  .toast-container {
+    left: 12px;
+    right: 12px;
+    top: 12px;
+  }
+
+  .toast {
+    max-width: none;
+  }
 }
 
 @keyframes spin {

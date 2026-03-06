@@ -3,6 +3,16 @@ import dbConnect from '@/lib/db';
 import Product from '@/lib/models/Product';
 import { requireAdmin } from '@/lib/auth';
 
+function normalizeColorVariants(rawVariants) {
+    if (!Array.isArray(rawVariants)) return [];
+    return rawVariants
+        .map(variant => ({
+            color: typeof variant?.color === 'string' ? variant.color.trim() : '',
+            image: typeof variant?.image === 'string' ? variant.image.trim() : '',
+        }))
+        .filter(variant => variant.color && variant.image);
+}
+
 export async function GET(request, { params }) {
     try {
         await dbConnect();
@@ -27,7 +37,25 @@ export async function PUT(request, { params }) {
         await dbConnect();
         const { id } = await params;
         const body = await request.json();
-        const product = await Product.findByIdAndUpdate(id, body, {
+        const hasVariants = Array.isArray(body.colorVariants);
+        const hasColors = Array.isArray(body.colors);
+        const updateBody = { ...body };
+
+        if (hasVariants || hasColors) {
+            const colorVariants = hasVariants ? normalizeColorVariants(body.colorVariants) : [];
+            const normalizedColors = (
+                colorVariants.length > 0
+                    ? colorVariants.map(variant => variant.color)
+                    : hasColors ? body.colors : []
+            )
+                .map(color => (typeof color === 'string' ? color.trim() : ''))
+                .filter(Boolean);
+
+            if (hasVariants) updateBody.colorVariants = colorVariants;
+            updateBody.colors = normalizedColors;
+        }
+
+        const product = await Product.findByIdAndUpdate(id, updateBody, {
             new: true,
             runValidators: true,
         });

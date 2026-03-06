@@ -135,7 +135,17 @@ export async function POST(request) {
                 );
             }
 
-            const availableColors = Array.isArray(product.colors) ? product.colors.filter(Boolean) : [];
+            const colorVariants = Array.isArray(product.colorVariants)
+                ? product.colorVariants
+                    .map(variant => ({
+                        color: typeof variant?.color === 'string' ? variant.color.trim() : '',
+                        image: typeof variant?.image === 'string' ? variant.image.trim() : '',
+                    }))
+                    .filter(variant => variant.color)
+                : [];
+            const availableColors = colorVariants.length > 0
+                ? colorVariants.map(variant => variant.color)
+                : (Array.isArray(product.colors) ? product.colors.filter(Boolean) : []);
             const selectedColor = typeof item.color === 'string' ? item.color.trim() : '';
             if (availableColors.length > 0) {
                 if (!selectedColor) {
@@ -151,6 +161,9 @@ export async function POST(request) {
                     );
                 }
             }
+            const selectedVariant = colorVariants.find(
+                variant => variant.color.toLowerCase() === selectedColor.toLowerCase()
+            );
 
             totalAmount += product.price * quantity;
 
@@ -159,7 +172,7 @@ export async function POST(request) {
                 title: product.title,
                 price: product.price,
                 quantity,
-                image: product.images?.[0] || '',
+                image: selectedVariant?.image || product.images?.[0] || '',
                 color: selectedColor || null,
             });
         }
