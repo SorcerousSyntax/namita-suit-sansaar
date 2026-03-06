@@ -1220,6 +1220,10 @@ tr:hover td {
   align-items: start;
 }
 
+.product-detail-grid > * {
+  min-width: 0;
+}
+
 .product-gallery {
   display: flex;
   flex-direction: column;
@@ -1243,6 +1247,10 @@ tr:hover td {
 .product-thumbnails {
   display: flex;
   gap: 8px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .product-thumb {
@@ -1253,6 +1261,7 @@ tr:hover td {
   border: 2px solid var(--border);
   cursor: pointer;
   transition: var(--transition);
+  flex: 0 0 auto;
 }
 
 .product-thumb:hover,
